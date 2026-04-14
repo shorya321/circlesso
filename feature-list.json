@@ -63,7 +63,7 @@
       "Verify authenticated admin can access /dashboard",
       "Write test for middleware route protection"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 4
   },
   {
@@ -77,7 +77,7 @@
       "Write unit test for generateRandomPassword — length, character classes",
       "Verify redirect works: visiting / goes to /dashboard"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 4.5
   },
   {
@@ -95,7 +95,7 @@
       "Handle 409 Conflict (user already exists) gracefully",
       "Write unit tests with mocked HTTP calls"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 5
   },
   {
@@ -113,7 +113,7 @@
       "Base URL: https://app.circle.so/api/admin/v2",
       "Write unit tests with mocked HTTP calls"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 6
   },
   {
@@ -131,7 +131,7 @@
       "Handle Resend API errors gracefully",
       "Write unit test for email rendering and sending"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 7
   },
   {
@@ -148,7 +148,7 @@
       "Handle Circle API errors with proper error responses",
       "Write integration test"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 8
   },
   {
@@ -162,7 +162,7 @@
       "Return JSON array of CircleAccessGroup objects",
       "Write integration test"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 9
   },
   {
@@ -182,7 +182,7 @@
       "Handle partial failures: if email fails after Auth0 creation, return status indicating retry needed",
       "Write integration test"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 10
   },
   {
@@ -203,7 +203,7 @@
       "If Circle succeeds but Auth0 fails, return error indicating Circle member created",
       "Write integration test"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 11
   },
   {
@@ -221,7 +221,7 @@
       "Handle case where app_metadata.email_sent is missing (auth0_created)",
       "Write integration test"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 11.5
   },
   {

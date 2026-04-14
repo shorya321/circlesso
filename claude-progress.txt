@@ -36,3 +36,27 @@
 - Implemented F001 (project setup verified), F002 (env config + 15 tests), F003 (types verified)
 - Status: 3/25 features complete
 - Next: F004 (Auth0 v4 middleware) — needs research on @auth0/nextjs-auth0 v4 SDK patterns
+
+## Session 3 — 2026-04-14 (Core Implementation)
+- Implemented F004 (Auth0 v4 proxy): lib/auth0.ts singleton + proxy.ts with broad matcher
+  - Auth0 v4 SDK handles /auth/* routes automatically via middleware — no route handler needed
+  - 14 tests (12 proxy route matching + 2 Auth0 client)
+- Implemented F004B (Utilities): generateRandomPassword (32 chars, crypto.randomBytes) + page redirect
+  - 8 tests for password generation (length, character classes, uniqueness)
+- Implemented F005 (Auth0 Management API): M2M token with cache, getUserByEmail, createUser, createPasswordTicket, updateUserMetadata
+  - Token cached with expires_in minus 5-min safety margin
+  - 409 conflict handled gracefully for duplicate users
+  - 13 tests with mocked fetch
+- Implemented F006 (Circle.so API): listMembers with pagination, createMember, listAccessGroups, addMemberToGroup
+  - 9 tests with mocked fetch
+- Implemented F007 (Resend email): sendWelcomeEmail via Resend SDK with React Email template
+  - 3 tests with mocked Resend SDK
+- Implemented F008 (GET /api/circle/members): Lists members with Auth0 status derivation
+- Implemented F009 (GET /api/circle/access-groups): Lists access groups
+- Implemented F010 (POST /api/provision/migrate): Full provisioning flow with partial failure handling
+- Implemented F011 (POST /api/provision/create): 6-step creation flow with per-step error recovery
+- Implemented F011B (GET /api/status): Status endpoint (same logic as F008)
+- Route handler tests: 10 integration tests (session checks, happy paths, error paths, partial failures)
+- Status: 12/25 features complete (F001-F011B)
+- Total: 72 tests, all passing
+- Next: F012-F016 (UI components — dashboard layout, member table, new member form)
