@@ -19,6 +19,20 @@ Otherwise, pick the highest-priority feature where `passes` is `false`.
 2. Read any related files that will be modified
 3. Understand the existing code patterns before writing new code
 
+### Phase 1.5: Research (CRITICAL — do not skip)
+If this feature touches ANY external API or library (Auth0, Circle.so, Resend, etc.):
+4. Fetch current documentation using `ref_search_documentation` or `ref_read_url`
+5. Verify API endpoints, request/response formats, and SDK patterns against live docs
+6. Compare with our existing stubs in `lib/` and `types/index.ts`
+7. Update types or stubs if the live docs differ from what we have
+8. Do NOT proceed to implementation until you've confirmed current API behavior
+
+Key documentation URLs:
+- Auth0 Management API: https://auth0.com/docs/api/management/v2
+- Auth0 Next.js SDK: https://github.com/auth0/nextjs-auth0
+- Circle.so Admin API v2: https://api.circle.so/apis/admin-api
+- Resend: https://resend.com/docs/api-reference
+
 ### Phase 2: Test First (TDD)
 4. Write a failing test for the feature (RED)
 5. Run the test — confirm it fails
