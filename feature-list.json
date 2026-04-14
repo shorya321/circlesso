@@ -67,6 +67,20 @@
     "priority": 4
   },
   {
+    "id": "F004B",
+    "category": "setup",
+    "description": "Utility helpers — random password generator and app/page.tsx redirect to /dashboard",
+    "steps": [
+      "Create lib/utils.ts generateRandomPassword() using crypto.randomBytes (32 chars, mixed case, numbers, symbols)",
+      "Meets Auth0 default password policy (min 8 chars, uppercase, lowercase, number, special)",
+      "Update app/page.tsx to redirect to /dashboard using next/navigation redirect()",
+      "Write unit test for generateRandomPassword — length, character classes",
+      "Verify redirect works: visiting / goes to /dashboard"
+    ],
+    "passes": false,
+    "priority": 4.5
+  },
+  {
     "id": "F005",
     "category": "functional",
     "description": "Auth0 Management API client — M2M token fetching with cache and user CRUD operations",
@@ -193,6 +207,24 @@
     "priority": 11
   },
   {
+    "id": "F011B",
+    "category": "api",
+    "description": "GET /api/status — returns provisioning status for all Circle members by checking Auth0 app_metadata",
+    "steps": [
+      "Create app/api/status/route.ts (replace stub)",
+      "Validate Auth0 session before processing",
+      "Fetch all Circle.so members via circle-api.ts",
+      "For each member, check Auth0 by email via getUserByEmail()",
+      "Derive status from app_metadata: not_provisioned / auth0_created / email_sent",
+      "Return JSON array of MemberWithStatus objects",
+      "Handle case where Auth0 returns no user (not provisioned)",
+      "Handle case where app_metadata.email_sent is missing (auth0_created)",
+      "Write integration test"
+    ],
+    "passes": false,
+    "priority": 11.5
+  },
+  {
     "id": "F012",
     "category": "ui",
     "description": "Dashboard layout with navigation — auth-protected with Auth0 org admin check",
@@ -207,6 +239,21 @@
     ],
     "passes": false,
     "priority": 12
+  },
+  {
+    "id": "F012B",
+    "category": "ui",
+    "description": "Toast notifications (Sonner) and loading states integrated into dashboard layout",
+    "steps": [
+      "Add Sonner Toaster component to app/layout.tsx or dashboard/layout.tsx",
+      "Create reusable loading skeleton for member table (components/member-table-skeleton.tsx)",
+      "Show skeleton while /api/circle/members is loading",
+      "Show error toast on any API failure with descriptive message",
+      "Show success toast on successful provisioning",
+      "Test toast appears on API error simulation"
+    ],
+    "passes": false,
+    "priority": 12.5
   },
   {
     "id": "F013",
@@ -328,6 +375,37 @@
     ],
     "passes": false,
     "priority": 19
+  },
+  {
+    "id": "F019B",
+    "category": "integration",
+    "description": "Partial failure recovery — Circle.so created but Auth0 fails, email retry works",
+    "steps": [
+      "Simulate: Add new member where Circle.so succeeds but Auth0 creation fails",
+      "Verify error message indicates 'Created in Circle but Auth0 failed'",
+      "Verify the member appears in Existing Members tab (pulled from Circle.so)",
+      "Verify admin can retry migration for that member from Existing Members tab",
+      "Simulate: Auth0 created but Resend email fails",
+      "Verify 'Retry Email' button appears (yellow status badge)",
+      "Click 'Retry Email' — verify email sends and status updates to green",
+      "Verify app_metadata.email_sent updates correctly after retry"
+    ],
+    "passes": false,
+    "priority": 19.5
+  },
+  {
+    "id": "F019C",
+    "category": "integration",
+    "description": "Email status tracking persists across page refreshes via Auth0 app_metadata",
+    "steps": [
+      "Migrate a member — verify status shows 'Email Sent' (green)",
+      "Refresh the page — verify status still shows 'Email Sent' (not reset)",
+      "Open in a new browser tab — verify same status",
+      "Check Auth0 Dashboard — confirm app_metadata has email_sent=true and email_sent_at",
+      "Verify status derivation: no Auth0 user = red, Auth0 user without email_sent = yellow, with email_sent = green"
+    ],
+    "passes": false,
+    "priority": 19.7
   },
   {
     "id": "F020",

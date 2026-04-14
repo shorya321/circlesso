@@ -102,7 +102,7 @@ This project follows the Anthropic long-running agent harness pattern.
 **On EVERY session:**
 1. Run `pwd` to confirm working directory is `/Volumes/shorya/apps/circleso`
 2. Read `claude-progress.txt` for recent work
-3. Read `feature-list.json` and pick the highest-priority incomplete feature
+3. Read `feature-list.json` (25 features, F001-F020 + F004B/F011B/F012B/F019B/F019C) and pick the highest-priority incomplete feature
 4. Run `bash init.sh` to start dev server and verify basic functionality
 5. Implement ONE feature at a time
 6. Test the feature end-to-end
