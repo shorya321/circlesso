@@ -1,7 +1,8 @@
 # Admin Auth0 User Provisioning Dashboard
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Last Updated:** 2026-04-14
+**Status:** Approved — scaffolding complete, implementation pending
 **Project:** `/Volumes/shorya/apps/circleso`
 
 ## Problem
@@ -61,7 +62,8 @@ Admin (Auth0 org admin login)
 | Framework | Next.js 16 (App Router) | Matches helpucompli-sso project |
 | Language | TypeScript (strict) | Type safety |
 | Database | None | Only ~30 members, query APIs directly |
-| Admin auth | Auth0 (org admin role) | Consistent with SSO setup |
+| Admin auth | Auth0 Regular Web App + @auth0/nextjs-auth0 v4 (org admin role) | Consistent with SSO setup |
+| Auth0 provisioning | Separate M2M Application (not the Regular Web App) | Auth0 recommended, clean separation |
 | Auth0 API | Management API (M2M token) | Server-side user creation |
 | Circle API | Admin API v2 | List members, create members, manage access groups |
 | Email | Resend + React Email | Modern, developer-friendly, branded templates |
@@ -136,32 +138,41 @@ Returns: `{ "ticket": "https://tenant.auth0.com/lo/reset?ticket=..." }`
 ## Environment Variables
 
 ```env
-# Auth0 Management API (M2M)
+# Auth0 (shared domain for both apps)
 AUTH0_DOMAIN=helpucompli.us.auth0.com
+
+# Auth0 M2M Application (separate app for Management API)
 AUTH0_M2M_CLIENT_ID=your-m2m-client-id
 AUTH0_M2M_CLIENT_SECRET=your-m2m-client-secret
 AUTH0_DB_CONNECTION=Username-Password-Authentication
 
-# Auth0 Admin Login (for dashboard access — @auth0/nextjs-auth0 v4)
+# Auth0 Regular Web Application (admin login via @auth0/nextjs-auth0 v4)
 AUTH0_CLIENT_ID=your-web-app-client-id
 AUTH0_CLIENT_SECRET=your-web-app-client-secret
-AUTH0_DOMAIN=helpucompli.us.auth0.com
-APP_BASE_URL=http://localhost:3000
-AUTH0_SECRET=random-secret-for-session
+AUTH0_SECRET=generate-a-random-secret-min-32-chars
+APP_BASE_URL=http://localhost:3001
 
-# Circle.so Admin API
+# Circle.so Admin API v2
 CIRCLE_API_TOKEN=your-circle-admin-api-token
 CIRCLE_COMMUNITY_ID=your-community-id
 
-# Resend
+# Resend Email
 RESEND_API_KEY=re_xxxxx
 EMAIL_FROM=noreply@helpucompli.com
 
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Provisioning Config
 PASSWORD_TICKET_TTL=604800
 PASSWORD_TICKET_RESULT_URL=https://compass.helpucompli.com
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3001
 ```
+
+**Auth0 two-app setup:**
+- **Regular Web Application** — for admin login (authorization code flow via `@auth0/nextjs-auth0` v4)
+- **Machine-to-Machine Application** — for server-side Management API calls (client_credentials grant)
+- Both share the same `AUTH0_DOMAIN` but have separate `CLIENT_ID`/`CLIENT_SECRET`
+- M2M app authorized for Management API with scopes: `create:users`, `read:users`, `update:users`, `create:user_tickets`
 
 ## Directory Structure
 
@@ -172,7 +183,7 @@ circleso/
 │   ├── layout.tsx                    # Root layout with Auth0 provider
 │   ├── page.tsx                      # Redirect to /dashboard
 │   ├── api/
-│   │   ├── auth/[auth0]/route.ts     # Auth0 v4 auth handler
+│   │   ├── auth/[auth0]/route.ts     # Auth0 v4 login/logout/callback handler
 │   │   ├── circle/
 │   │   │   ├── members/route.ts      # GET: list Circle members
 │   │   │   └── access-groups/route.ts # GET: list access groups
@@ -307,3 +318,49 @@ For "Migrate All" operations, process users sequentially with a 200ms delay betw
 8. **Partial failure (new member):** Create in Circle, then simulate Auth0 failure → verify Circle member exists and can be retried from Existing Members tab
 9. **Email retry:** Provision a user but simulate Resend failure → verify "Retry Email" button appears and works
 10. **Bulk migration:** Click "Migrate All" → verify sequential processing with progress indicator and no rate limit errors
+
+## Feature List (25 features)
+
+Features tracked in `feature-list.json` — agent implements ONE at a time, only changes `passes` field.
+
+| Category | Count | IDs |
+|----------|-------|-----|
+| Setup | 5 | F001, F002, F003, F004, F004B |
+| Functional | 3 | F005, F006, F007 |
+| API | 5 | F008, F009, F010, F011, F011B |
+| UI | 6 | F012, F012B, F013, F014, F015, F016 |
+| Integration | 5 | F017, F018, F019, F019B, F019C |
+| Security | 1 | F020 |
+
+Features added after initial planning:
+- **F004B** — utility helpers (random password generator, `/` → `/dashboard` redirect)
+- **F011B** — `GET /api/status` endpoint (provisioning status via Auth0 `app_metadata`)
+- **F012B** — Sonner toast notifications + loading skeleton states
+- **F019B** — partial failure recovery E2E tests
+- **F019C** — email status tracking persistence across page refreshes
+
+## Design System
+
+Full design system in `design-system/DESIGN.md` (generated via ui-ux-pro-max skill).
+
+- **Style:** Data-Dense Dashboard
+- **Colors:** Blue primary (`#1E40AF`), amber accent (`#D97706`), red destructive (`#DC2626`), green success (`#16A34A`)
+- **Typography:** Fira Sans (headings) + Fira Code (data/monospace)
+- **Status badges:** Red (not provisioned), Amber (email pending), Green (email sent), Blue (already provisioned)
+- **UI framework:** shadcn/ui components + Tailwind CSS + Lucide React icons
+
+## Agent Harness
+
+Project follows the Anthropic long-running agent harness pattern. Key files:
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Project overview, architecture, API details, harness protocol |
+| `feature-list.json` | 25 features with `passes: true/false` tracking |
+| `claude-progress.txt` | Cross-session append-only progress log |
+| `init.sh` | Session bootstrap (env check, deps, type check, dev server) |
+| `design-system/DESIGN.md` | UI design system (colors, typography, components, accessibility) |
+| `.claude/commands/` | 7 commands: `/init`, `/implement`, `/verify`, `/progress`, `/research`, `/review`, `/build-fix` |
+| `.claude/agents/` | 4 agents: planner, code-reviewer, build-error-resolver, security-reviewer |
+| `.claude/rules/` | Coding standards, testing, security, research-first workflow |
+| `.claude/hooks.json` | Lifecycle hooks (block --no-verify, build reminders) |

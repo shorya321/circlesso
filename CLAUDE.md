@@ -1,152 +1,134 @@
-# CircleSo Admin — Auth0 User Provisioning Dashboard
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
-Admin dashboard for migrating ~30 existing Circle.so members to Auth0 SSO and adding new members. Built on auth.helpucompli.com ecosystem.
 
-**Circle.so community:** compass.helpucompli.com
-**Auth0 tenant:** helpucompli.us.auth0.com
-**Status:** Scaffolding complete, features pending implementation
-
-## Tech Stack
-- **Framework:** Next.js 16 (App Router, Route Handlers for API)
-- **Language:** TypeScript (strict mode)
-- **Database:** None (status tracked via Auth0 app_metadata)
-- **Admin Auth:** Auth0 with @auth0/nextjs-auth0 v4 (org admin role)
-- **Auth0 API:** Management API via M2M token (user provisioning)
-- **Circle API:** Admin API v2 (member listing, creation, access groups)
-- **Email:** Resend + React Email (branded welcome emails)
-- **UI:** Tailwind CSS + shadcn/ui
-- **Validation:** Zod (env vars, form inputs, API payloads)
-
-## Architecture
-```
-Admin logs in via Auth0 (org admin role check)
-  │
-  ├── "Existing Members" tab
-  │     Fetches Circle.so members via Admin API v2
-  │     Shows Auth0 provisioning status per member
-  │     "Migrate" button → creates Auth0 account + sends password email
-  │
-  └── "Add New Member" tab
-        Form: name, email, access group
-        Creates member in Circle.so + Auth0 + sends password email
-```
-
-### Provisioning Flow (per user)
-1. Check Auth0 by email (skip if exists)
-2. POST Auth0 /api/v2/users (random password, email_verified: false)
-3. POST Auth0 /api/v2/tickets/password-change (mark_email_as_verified: true)
-4. PATCH Auth0 /api/v2/users/{id} (set app_metadata.email_sent = true)
-5. Send branded Resend email with password-set ticket link
-
-## Directory Structure
-```
-circleso/
-├── CLAUDE.md                         # This file — agent harness instructions
-├── feature-list.json                 # Features with pass/fail tracking (JSON)
-├── claude-progress.txt               # Cross-session progress log
-├── init.sh                           # Session bootstrap script
-├── middleware.ts                      # Auth0 v4 route protection
-├── app/
-│   ├── layout.tsx                    # Root layout with Auth0 UserProvider
-│   ├── page.tsx                      # Redirect to /dashboard
-│   ├── api/
-│   │   ├── auth/[auth0]/route.ts     # Auth0 v4 auth handler
-│   │   ├── circle/
-│   │   │   ├── members/route.ts      # GET: list Circle members
-│   │   │   └── access-groups/route.ts # GET: list access groups
-│   │   ├── provision/
-│   │   │   ├── migrate/route.ts      # POST: migrate existing member to Auth0
-│   │   │   └── create/route.ts       # POST: create new member (Circle + Auth0)
-│   │   └── status/route.ts           # GET: provisioning status for all members
-│   └── dashboard/
-│       ├── layout.tsx                # Dashboard layout (auth-protected)
-│       ├── page.tsx                  # Existing Members tab
-│       └── new-member/
-│           └── page.tsx              # Add New Member form
-├── components/
-│   ├── member-table.tsx              # Table of Circle members with status
-│   ├── new-member-form.tsx           # Form for adding new members
-│   ├── provision-button.tsx          # Migrate/provision action button
-│   └── status-badge.tsx              # Visual status indicator
-├── lib/
-│   ├── auth0-management.ts          # Auth0 M2M token + Management API calls
-│   ├── circle-api.ts                # Circle.so Admin API v2 client
-│   ├── resend-email.ts              # Resend client + email sending
-│   ├── config.ts                    # Env validation (Zod, fail-fast)
-│   └── utils.ts                     # Random password generator, helpers
-├── emails/
-│   └── welcome-email.tsx            # React Email template
-├── types/
-│   └── index.ts                     # TypeScript interfaces
-├── .env.example
-├── .env.local                       # (git-ignored)
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-└── next.config.ts
-```
+Admin dashboard for migrating ~30 existing Circle.so members (compass.helpucompli.com) to Auth0 SSO (helpucompli.us.auth0.com) and onboarding new members. No database — provisioning status tracked via Auth0 `app_metadata`.
 
 ## Commands
-- `npm run dev` — Next.js dev server (port 3001)
-- `npm run build` — Production build
-- `npm run start` — Production server
-- `npm test` — Jest test suite
-- `npm run lint` — ESLint
+
+```bash
+npm run dev              # Dev server on port 3001 (Turbopack)
+npm run build            # Production build
+npm test                 # Jest test suite
+npm test -- --testPathPattern=config  # Run single test file
+npm run test:coverage    # Jest with coverage report
+npm run lint             # ESLint
+npx tsc --noEmit         # Type check without emitting
+```
+
+## Architecture
+
+Two auth systems, one dashboard:
+
+- **Admin login**: `@auth0/nextjs-auth0` v4 — Regular Web Application, org admin role check via `middleware.ts`
+- **User provisioning**: Auth0 Management API via separate M2M application (`lib/auth0-management.ts`)
+- **Member data**: Circle.so Admin API v2 at `https://app.circle.so/api/admin/v2` with `Bearer` token (`lib/circle-api.ts`)
+- **Email**: Resend API with React Email template (`emails/welcome-email.tsx` + `lib/resend-email.ts`)
+
+### Data flow (no database)
+
+Status is derived at read time by querying Auth0 for each Circle member:
+- Not in Auth0 → `not_provisioned` (red)
+- In Auth0, `app_metadata.email_sent !== true` → `auth0_created` (yellow)
+- In Auth0, `app_metadata.email_sent === true` → `email_sent` (green)
+
+### Provisioning flow (per user)
+
+1. `GET /api/v2/users-by-email` — skip if exists
+2. `POST /api/v2/users` — random password via `crypto.randomBytes`, sets `app_metadata.source`
+3. `POST /api/v2/tickets/password-change` — 7-day TTL, `mark_email_as_verified: true`
+4. `PATCH /api/v2/users/{id}` — sets `app_metadata.email_sent = true`
+5. Resend API — branded welcome email with ticket link
+
+### Key patterns
+
+- All API routes are server-side Route Handlers under `app/api/`
+- Every route validates Auth0 session before processing
+- Env vars validated at startup via Zod schema in `lib/config.ts` — app fails fast on missing vars
+- Types centralized in `types/index.ts`
+- Bulk migration: sequential with 200ms delay between users (Auth0 rate limit: 50 req/sec)
+- Circle.so API uses pagination (`per_page=100`, check `has_next_page`)
+
+## External APIs
+
+| API | Base URL | Auth | M2M Scopes |
+|-----|----------|------|------------|
+| Auth0 Management | `https://{AUTH0_DOMAIN}/api/v2` | `Bearer <M2M token>` | `create:users`, `read:users`, `update:users`, `create:user_tickets` |
+| Circle.so Admin v2 | `https://app.circle.so/api/admin/v2` | `Bearer <CIRCLE_API_TOKEN>` | — |
+| Resend | `https://api.resend.com` | `Bearer <RESEND_API_KEY>` | — |
+
+## Auth0 API Payloads
+
+**Create user:**
+```json
+{
+  "email": "user@example.com",
+  "connection": "Username-Password-Authentication",
+  "password": "<random-32-char-via-crypto.randomBytes>",
+  "email_verified": false,
+  "name": "First Last",
+  "app_metadata": { "source": "admin_provisioning", "circle_member_id": "123" }
+}
+```
+
+**Password change ticket:**
+```json
+{
+  "user_id": "auth0|...",
+  "result_url": "https://compass.helpucompli.com",
+  "mark_email_as_verified": true,
+  "ttl_sec": 604800
+}
+```
+Returns: `{ "ticket": "https://tenant.auth0.com/lo/reset?ticket=..." }`
+
+**M2M token caching:** Fetch via `POST /oauth/token` with `grant_type=client_credentials`. Cache based on actual `expires_in` value from response minus 5-minute safety margin. Do NOT hardcode 24 hours.
+
+## Error Handling
+
+| Error | Handling |
+|-------|----------|
+| Auth0 user already exists (409) | Return `already_provisioned`, show blue badge |
+| Circle member creation fails | Stop, show error, don't create Auth0 account |
+| Auth0 creation succeeds but email fails | Set `app_metadata.email_sent = false`, show "Retry Email" button (yellow badge) |
+| Auth0 M2M token expired | Auto-refresh from cache expiry check |
+| Circle API rate limit (429) | Show error toast, admin retries manually |
+| Invalid email format | Reject at Zod form validation before any API call |
+
+## Partial Failure Recovery (Add New Member flow)
+
+5 sequential API calls — each can fail independently:
+
+| Step | If Fails | Recovery |
+|------|----------|----------|
+| 1. Circle member creation | Stop, show error | No cleanup needed |
+| 2. Access group assignment | Show warning "Member created but not in access group" | Admin retries via Circle dashboard |
+| 3. Auth0 user creation | Show error "Created in Circle but Auth0 failed" | Admin retries from Existing Members tab (member now visible from Circle API) |
+| 4. Password ticket generation | Show error | Admin retries migration (Auth0 user exists, will get `already_provisioned` → skip to ticket) |
+| 5. Resend email | Set `app_metadata.email_sent = false`, show "Retry Email" button | Admin clicks retry |
 
 ## Agent Harness Protocol
 
-This project follows the Anthropic long-running agent harness pattern.
+This project uses the Anthropic long-running agent harness pattern.
 
-**On FIRST session:** Run `/init` — bootstraps project, creates feature list, writes init.sh
-**On EVERY session:**
-1. Run `pwd` to confirm working directory is `/Volumes/shorya/apps/circleso`
-2. Read `claude-progress.txt` for recent work
-3. Read `feature-list.json` (25 features, F001-F020 + F004B/F011B/F012B/F019B/F019C) and pick the highest-priority incomplete feature
-4. Run `bash init.sh` to start dev server and verify basic functionality
-5. Implement ONE feature at a time
-6. Test the feature end-to-end
-7. Mark it as passing in `feature-list.json` (only change `passes` field)
-8. Git commit with descriptive message
-9. Update `claude-progress.txt`
+**Every session:**
+1. Read `claude-progress.txt` for prior work
+2. Read `feature-list.json` — pick highest-priority feature where `passes: false`
+3. Run `bash init.sh` to start dev server
+4. Implement ONE feature at a time using TDD (test first → implement → verify)
+5. Before implementing any external API call, verify current docs via `ref_read_url` or `ref_search_documentation`
+6. Mark `passes: true` in `feature-list.json` — ONLY change the `passes` field
+7. Commit: `feat: implement F0XX — <description>`
+8. Append summary to `claude-progress.txt`
 
-**NEVER** remove or edit feature descriptions in feature-list.json — only change `passes` field.
-**NEVER** try to implement multiple features at once.
-**ALWAYS** leave the codebase in a clean, working state.
-
-## External API Reference
-
-### Auth0 Management API (M2M)
-- **M2M scopes:** `create:users`, `read:users`, `update:users`, `create:user_tickets`
-- **Connection:** `Username-Password-Authentication`
-- `GET /api/v2/users-by-email?email={email}` — check if user exists
-- `POST /api/v2/users` — create user with random password
-- `POST /api/v2/tickets/password-change` — generate password-set link (7-day TTL)
-- `PATCH /api/v2/users/{id}` — update app_metadata (email_sent tracking)
-
-### Circle.so Admin API v2
-- **Base URL:** `https://app.circle.so/api/admin/v2`
-- **Auth:** `Authorization: Bearer <CIRCLE_API_TOKEN>`
-- `GET /community_members?per_page=100&community_id={id}` — list members
-- `POST /community_members` — create member
-- `GET /access_groups` — list access groups
-- `POST /access_groups/{id}/members` — add member to access group
-
-### Resend Email API
-- **Package:** `resend` + `@react-email/components`
-- Send welcome email with Auth0 password-change ticket URL
-
-## Security Rules — CRITICAL
-- NEVER hardcode secrets in source code
-- ALL secrets from environment variables, validated at startup via Zod
-- All API routes validate Auth0 session before processing
-- Auth0 M2M client_secret stored in env variable only
-- Circle API token stored in env variable only
-- Resend API key stored in env variable only
-- Random passwords generated with crypto.randomBytes (never stored or shown)
-- Password-change ticket URLs are single-use
-- No secrets in client-side code (all API calls from server-side route handlers)
-- Bulk migration: sequential processing with 200ms delay between users (rate limit safety)
+**25 features** (F001–F020 + F004B/F011B/F012B/F019B/F019C) across setup → functional → api → ui → integration → security.
 
 ## References
-- @docs/superpowers/specs/2026-04-14-admin-auth0-provisioning-design.md — Full design spec
+
+- `design-system/DESIGN.md` — **MUST follow** for all UI work (colors, typography, badges, spacing, components)
+- `docs/superpowers/specs/2026-04-14-admin-auth0-provisioning-design.md` — full design spec
+- `.claude/commands/` — agent commands: `/init`, `/implement`, `/verify`, `/progress`, `/research`, `/review`, `/build-fix`
+- `.claude/agents/` — planner, code-reviewer, build-error-resolver, security-reviewer
+- `.claude/rules/` — coding standards, testing, security, research-first workflow
