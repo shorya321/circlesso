@@ -56,7 +56,7 @@
     "category": "setup",
     "description": "Auth0 v4 middleware protects /dashboard/* routes and auth handler is configured",
     "steps": [
-      "Create middleware.ts at project root with Auth0 v4 pattern",
+      "Create proxy.ts at project root with Next.js 16 proxy pattern (replaces deprecated middleware.ts)",
       "Configure route matcher for /dashboard/:path*",
       "Create app/api/auth/[auth0]/route.ts for login/logout/callback",
       "Verify unauthenticated access to /dashboard redirects to Auth0 login",

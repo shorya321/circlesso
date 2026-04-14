@@ -22,7 +22,7 @@ npx tsc --noEmit         # Type check without emitting
 
 Two auth systems, one dashboard:
 
-- **Admin login**: `@auth0/nextjs-auth0` v4 — Regular Web Application, org admin role check via `middleware.ts`
+- **Admin login**: `@auth0/nextjs-auth0` v4 — Regular Web Application, org admin role check via `proxy.ts` (Next.js 16 replaces middleware.ts)
 - **User provisioning**: Auth0 Management API via separate M2M application (`lib/auth0-management.ts`)
 - **Member data**: Circle.so Admin API v2 at `https://app.circle.so/api/admin/v2` with `Bearer` token (`lib/circle-api.ts`)
 - **Email**: Resend API with React Email template (`emails/welcome-email.tsx` + `lib/resend-email.ts`)

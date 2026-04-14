@@ -34,8 +34,11 @@ Before writing implementation code, confirm:
 
 ## Example
 
-WRONG: Assume `@auth0/nextjs-auth0` exports `auth0` for middleware
-RIGHT: Check current docs → discover v4 uses `Auth0Client` + `middleware()` method
+WRONG: Use `middleware.ts` in Next.js 16 (deprecated)
+RIGHT: Check docs → Next.js 16 uses `proxy.ts` with `export function proxy(request: Request)`
+
+WRONG: Guess Auth0 SDK patterns from training data
+RIGHT: Check current docs → v4 uses `Auth0Client` + `auth0.middleware(request)` inside `proxy.ts`
 
 WRONG: Assume Circle.so base URL is `api-headless.circle.so`
 RIGHT: Check current docs → discover it's `app.circle.so/api/admin/v2`

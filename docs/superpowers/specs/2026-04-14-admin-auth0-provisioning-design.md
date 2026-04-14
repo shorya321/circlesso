@@ -178,7 +178,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 
 ```
 circleso/
-├── middleware.ts                     # Auth0 v4 middleware (protects /dashboard/*)
+├── proxy.ts                         # Next.js 16 proxy (replaces middleware.ts, protects /dashboard/*)
 ├── app/
 │   ├── layout.tsx                    # Root layout with Auth0 provider
 │   ├── page.tsx                      # Redirect to /dashboard
