@@ -17,3 +17,22 @@
   - Auth0 M2M scopes: create:users, read:users, update:users, create:user_tickets
   - Sequential bulk migration with 200ms delay for rate limit safety
 - Next: Initialize Next.js 16 project and implement F001 (project setup)
+
+## Session 2 — 2026-04-14 (Implementation Start)
+- Analyzed ECC repo structure (commands, agents, rules, hooks patterns)
+- Analyzed Anthropic agent harness article (init.sh, feature-list.json, progress log)
+- Set up full agent harness: 7 commands, 4 agents, 7 rules, hooks.json
+- Installed dependencies and scaffolded project (Next.js 16, Auth0, Resend, shadcn/ui)
+- Created all API route stubs (5 routes returning 501)
+- Created lib stubs (auth0-management, circle-api, resend-email)
+- Created React Email welcome template
+- Added research-first workflow (rule + /research command)
+- Feature list expanded: 20 → 25 features (added F004B, F011B, F012B, F019B, F019C)
+- Researched Auth0 Regular Web App vs M2M — confirmed M2M required for Management API
+- Installed ui-ux-pro-max skill, generated design system (Data-Dense Dashboard style)
+- Created design-system/DESIGN.md with colors, typography, components, accessibility
+- Rewrote CLAUDE.md (added API payloads, error handling, partial failure recovery)
+- Updated spec with all post-planning changes
+- Implemented F001 (project setup verified), F002 (env config + 15 tests), F003 (types verified)
+- Status: 3/25 features complete
+- Next: F004 (Auth0 v4 middleware) — needs research on @auth0/nextjs-auth0 v4 SDK patterns
