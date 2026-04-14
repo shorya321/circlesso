@@ -1,0 +1,19 @@
+# CircleSo Admin — Progress Log
+# Append-only log of work done across agent sessions
+
+## Session 1 — 2026-04-14 (Initializer)
+- Project scaffolded following Anthropic agent harness pattern
+- Created CLAUDE.md with full agent harness protocol
+- Created feature-list.json with 20 features (F001-F020)
+- Created init.sh session bootstrap script
+- Created design spec at docs/superpowers/specs/2026-04-14-admin-auth0-provisioning-design.md
+- Researched Auth0 Management API (M2M token, create user, password tickets, app_metadata)
+- Researched Circle.so Admin API v2 (members, access groups, base URL, auth headers)
+- Researched Resend email API with React Email templates
+- Key decisions:
+  - No database (only ~30 members, status tracked via Auth0 app_metadata)
+  - Auth0 v4 SDK (@auth0/nextjs-auth0 v4) with middleware.ts pattern
+  - Circle.so base URL: https://app.circle.so/api/admin/v2 with Bearer token auth
+  - Auth0 M2M scopes: create:users, read:users, update:users, create:user_tickets
+  - Sequential bulk migration with 200ms delay for rate limit safety
+- Next: Initialize Next.js 16 project and implement F001 (project setup)

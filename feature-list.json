@@ -1,0 +1,346 @@
+[
+  {
+    "id": "F001",
+    "category": "setup",
+    "description": "Next.js 16 project initialized with TypeScript, Tailwind CSS, and all core dependencies installed",
+    "steps": [
+      "Run create-next-app with TypeScript and App Router",
+      "Install dependencies: @auth0/nextjs-auth0, resend, @react-email/components, zod",
+      "Install UI dependencies: tailwindcss, shadcn/ui",
+      "Create tsconfig.json with strict mode",
+      "Create .env.example with all required variables",
+      "Create .gitignore",
+      "Verify npm run dev starts without errors on port 3001",
+      "Verify npm run build succeeds"
+    ],
+    "passes": false,
+    "priority": 1
+  },
+  {
+    "id": "F002",
+    "category": "setup",
+    "description": "Environment config validation — app fails fast on startup if any required env var is missing",
+    "steps": [
+      "Create lib/config.ts with Zod schema for all env vars",
+      "Validate AUTH0_DOMAIN, AUTH0_M2M_CLIENT_ID, AUTH0_M2M_CLIENT_SECRET, AUTH0_DB_CONNECTION",
+      "Validate AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_SECRET, APP_BASE_URL",
+      "Validate CIRCLE_API_TOKEN, CIRCLE_COMMUNITY_ID",
+      "Validate RESEND_API_KEY, EMAIL_FROM",
+      "Validate PASSWORD_TICKET_TTL, PASSWORD_TICKET_RESULT_URL",
+      "App throws clear error on missing var",
+      "Write unit test for config validation"
+    ],
+    "passes": false,
+    "priority": 2
+  },
+  {
+    "id": "F003",
+    "category": "setup",
+    "description": "TypeScript interfaces defined for all domain types",
+    "steps": [
+      "Create types/index.ts",
+      "Define CircleMember interface (id, email, name, avatar_url, access_groups, etc.)",
+      "Define CircleAccessGroup interface (id, name, description)",
+      "Define ProvisioningStatus type (not_provisioned, auth0_created, email_sent, failed)",
+      "Define MemberWithStatus interface (CircleMember + auth0Status + emailStatus)",
+      "Define CreateMemberPayload interface",
+      "Define MigratePayload interface",
+      "Define Auth0User interface",
+      "Verify types compile without errors"
+    ],
+    "passes": false,
+    "priority": 3
+  },
+  {
+    "id": "F004",
+    "category": "setup",
+    "description": "Auth0 v4 middleware protects /dashboard/* routes and auth handler is configured",
+    "steps": [
+      "Create middleware.ts at project root with Auth0 v4 pattern",
+      "Configure route matcher for /dashboard/:path*",
+      "Create app/api/auth/[auth0]/route.ts for login/logout/callback",
+      "Verify unauthenticated access to /dashboard redirects to Auth0 login",
+      "Verify authenticated admin can access /dashboard",
+      "Write test for middleware route protection"
+    ],
+    "passes": false,
+    "priority": 4
+  },
+  {
+    "id": "F005",
+    "category": "functional",
+    "description": "Auth0 Management API client — M2M token fetching with cache and user CRUD operations",
+    "steps": [
+      "Create lib/auth0-management.ts",
+      "Implement getManagementToken() with cache based on expires_in minus 5min safety margin",
+      "Implement getUserByEmail(email) — GET /api/v2/users-by-email",
+      "Implement createUser(email, name, metadata) — POST /api/v2/users with random password",
+      "Implement createPasswordTicket(userId, resultUrl, ttl) — POST /api/v2/tickets/password-change",
+      "Implement updateUserMetadata(userId, metadata) — PATCH /api/v2/users/{id}",
+      "Random password: 32 chars via crypto.randomBytes, meets Auth0 policy",
+      "Handle 409 Conflict (user already exists) gracefully",
+      "Write unit tests with mocked HTTP calls"
+    ],
+    "passes": false,
+    "priority": 5
+  },
+  {
+    "id": "F006",
+    "category": "functional",
+    "description": "Circle.so Admin API v2 client — list members, create members, manage access groups",
+    "steps": [
+      "Create lib/circle-api.ts",
+      "Implement listMembers(communityId) — GET /community_members with pagination handling",
+      "Implement createMember(communityId, email, name) — POST /community_members",
+      "Implement listAccessGroups(communityId) — GET /access_groups",
+      "Implement addMemberToGroup(groupId, email) — POST /access_groups/{id}/members",
+      "Handle pagination: per_page=100, check has_next_page, loop if needed",
+      "Auth header: Authorization: Bearer <CIRCLE_API_TOKEN>",
+      "Base URL: https://app.circle.so/api/admin/v2",
+      "Write unit tests with mocked HTTP calls"
+    ],
+    "passes": false,
+    "priority": 6
+  },
+  {
+    "id": "F007",
+    "category": "functional",
+    "description": "Resend email client with React Email welcome template",
+    "steps": [
+      "Create emails/welcome-email.tsx with React Email components",
+      "Branded template: HelpUcompli logo area, welcome message, 'Set Your Password' button",
+      "Dynamic fields: {name}, {passwordTicketUrl}, {expiryDays}",
+      "Subject: 'Set up your HelpUcompli account'",
+      "Create lib/resend-email.ts",
+      "Implement sendWelcomeEmail(to, name, passwordTicketUrl)",
+      "From address: EMAIL_FROM env var",
+      "Handle Resend API errors gracefully",
+      "Write unit test for email rendering and sending"
+    ],
+    "passes": false,
+    "priority": 7
+  },
+  {
+    "id": "F008",
+    "category": "api",
+    "description": "GET /api/circle/members — returns Circle.so community members with Auth0 provisioning status",
+    "steps": [
+      "Create app/api/circle/members/route.ts",
+      "Validate Auth0 session before processing",
+      "Fetch all Circle.so members via circle-api.ts",
+      "For each member, check Auth0 by email to determine provisioning status",
+      "Read app_metadata.email_sent to determine email status",
+      "Return JSON array of MemberWithStatus objects",
+      "Handle Circle API errors with proper error responses",
+      "Write integration test"
+    ],
+    "passes": false,
+    "priority": 8
+  },
+  {
+    "id": "F009",
+    "category": "api",
+    "description": "GET /api/circle/access-groups — returns Circle.so access groups",
+    "steps": [
+      "Create app/api/circle/access-groups/route.ts",
+      "Validate Auth0 session before processing",
+      "Fetch access groups via circle-api.ts",
+      "Return JSON array of CircleAccessGroup objects",
+      "Write integration test"
+    ],
+    "passes": false,
+    "priority": 9
+  },
+  {
+    "id": "F010",
+    "category": "api",
+    "description": "POST /api/provision/migrate — migrates existing Circle.so member to Auth0",
+    "steps": [
+      "Create app/api/provision/migrate/route.ts",
+      "Validate Auth0 session before processing",
+      "Parse and validate request body: { email, name, circleMemberId }",
+      "Check if user already exists in Auth0 (skip if yes, return 'already_provisioned')",
+      "Create Auth0 user with random password and app_metadata.source='admin_provisioning'",
+      "Generate password-change ticket (7-day TTL, mark_email_as_verified: true)",
+      "Send welcome email via Resend with ticket URL",
+      "Update Auth0 app_metadata: email_sent=true, email_sent_at=ISO timestamp",
+      "Return success response with provisioning details",
+      "Handle partial failures: if email fails after Auth0 creation, return status indicating retry needed",
+      "Write integration test"
+    ],
+    "passes": false,
+    "priority": 10
+  },
+  {
+    "id": "F011",
+    "category": "api",
+    "description": "POST /api/provision/create — creates new member in both Circle.so and Auth0",
+    "steps": [
+      "Create app/api/provision/create/route.ts",
+      "Validate Auth0 session before processing",
+      "Parse and validate request body: { firstName, lastName, email, accessGroupId }",
+      "Step 1: Create member in Circle.so via circle-api.ts",
+      "Step 2: Add member to access group via circle-api.ts",
+      "Step 3: Create Auth0 user with random password",
+      "Step 4: Generate password-change ticket",
+      "Step 5: Send welcome email via Resend",
+      "Step 6: Update Auth0 app_metadata with email_sent tracking",
+      "Handle partial failures at each step with appropriate error messages",
+      "If Circle succeeds but Auth0 fails, return error indicating Circle member created",
+      "Write integration test"
+    ],
+    "passes": false,
+    "priority": 11
+  },
+  {
+    "id": "F012",
+    "category": "ui",
+    "description": "Dashboard layout with navigation — auth-protected with Auth0 org admin check",
+    "steps": [
+      "Create app/layout.tsx with Auth0 UserProvider",
+      "Create app/dashboard/layout.tsx with sidebar navigation",
+      "Navigation tabs: 'Existing Members' and 'Add New Member'",
+      "Show logged-in admin name and logout button",
+      "Responsive layout with Tailwind CSS",
+      "Verify only authenticated org admins can access",
+      "Test layout renders correctly"
+    ],
+    "passes": false,
+    "priority": 12
+  },
+  {
+    "id": "F013",
+    "category": "ui",
+    "description": "Existing Members tab — table showing Circle.so members with Auth0 status and migrate buttons",
+    "steps": [
+      "Create app/dashboard/page.tsx",
+      "Create components/member-table.tsx",
+      "Create components/status-badge.tsx",
+      "Create components/provision-button.tsx",
+      "Fetch members from GET /api/circle/members on page load",
+      "Display table: Name | Email | Circle Access Groups | Auth0 Status | Action",
+      "Status badges: 'Not Provisioned' (red), 'Provisioned' (green), 'Email Sent' (blue)",
+      "'Migrate' button per row calls POST /api/provision/migrate",
+      "Loading spinner per row during provisioning",
+      "Update status badge on completion",
+      "Error toast on failure",
+      "Test table renders with mock data"
+    ],
+    "passes": false,
+    "priority": 13
+  },
+  {
+    "id": "F014",
+    "category": "ui",
+    "description": "Migrate All button — bulk migration with sequential processing and progress indicator",
+    "steps": [
+      "Add 'Migrate All Unprovisioned' button above the member table",
+      "On click: process unprovisioned members sequentially with 200ms delay",
+      "Show progress indicator: 'Migrating 5/30...'",
+      "Disable button during processing to prevent double-clicks",
+      "Update each row's status badge as it completes",
+      "Show summary toast on completion: 'X migrated, Y failed'",
+      "Handle rate limit errors with retry logic",
+      "Test bulk migration flow"
+    ],
+    "passes": false,
+    "priority": 14
+  },
+  {
+    "id": "F015",
+    "category": "ui",
+    "description": "Add New Member form — creates member in Circle.so + Auth0 with access group",
+    "steps": [
+      "Create app/dashboard/new-member/page.tsx",
+      "Create components/new-member-form.tsx",
+      "Form fields: First Name, Last Name, Email, Access Group (dropdown)",
+      "Access group dropdown populated from GET /api/circle/access-groups",
+      "Client-side validation: email format, required fields (Zod)",
+      "On submit: POST /api/provision/create",
+      "Success toast: 'Member created and welcome email sent'",
+      "Error toast with specific failure details",
+      "Server-side duplicate email check",
+      "Reset form on success",
+      "Test form validation and submission"
+    ],
+    "passes": false,
+    "priority": 15
+  },
+  {
+    "id": "F016",
+    "category": "ui",
+    "description": "Retry Email button for users where Auth0 was created but email failed",
+    "steps": [
+      "Show 'Retry Email' button for members with status 'auth0_created' (yellow badge)",
+      "On click: regenerate password ticket + resend email",
+      "Update app_metadata on success",
+      "Update status badge to 'Email Sent' (blue/green)",
+      "Test retry flow"
+    ],
+    "passes": false,
+    "priority": 16
+  },
+  {
+    "id": "F017",
+    "category": "integration",
+    "description": "End-to-end flow — migrate one existing member from Circle.so to Auth0 and verify email",
+    "steps": [
+      "Start dev server with valid env vars",
+      "Log in as admin via Auth0",
+      "Navigate to Existing Members tab",
+      "Verify Circle.so members are displayed",
+      "Click 'Migrate' on one member",
+      "Verify Auth0 account created (check Auth0 Dashboard)",
+      "Verify welcome email received (check Resend dashboard or inbox)",
+      "Verify password-set link works and redirects to compass.helpucompli.com",
+      "Verify member shows as 'Provisioned + Email Sent' in dashboard"
+    ],
+    "passes": false,
+    "priority": 17
+  },
+  {
+    "id": "F018",
+    "category": "integration",
+    "description": "End-to-end flow — add one new member to Circle.so and Auth0",
+    "steps": [
+      "Navigate to Add New Member tab",
+      "Fill in first name, last name, email, select access group",
+      "Click 'Create'",
+      "Verify member created in Circle.so (check Circle admin panel)",
+      "Verify member assigned to correct access group",
+      "Verify Auth0 account created",
+      "Verify welcome email received",
+      "Verify member appears in Existing Members tab with 'Provisioned' status"
+    ],
+    "passes": false,
+    "priority": 18
+  },
+  {
+    "id": "F019",
+    "category": "integration",
+    "description": "Duplicate detection — migrating an already-provisioned member shows correct status",
+    "steps": [
+      "Attempt to migrate a member who already has an Auth0 account",
+      "Verify system returns 'already_provisioned' response",
+      "Verify no duplicate Auth0 account created",
+      "Verify status badge shows 'Already Provisioned'",
+      "Test with both UI button click and direct API call"
+    ],
+    "passes": false,
+    "priority": 19
+  },
+  {
+    "id": "F020",
+    "category": "security",
+    "description": "All API routes validate Auth0 session and admin role before processing",
+    "steps": [
+      "Every POST /api/provision/* route checks Auth0 session",
+      "Every GET /api/circle/* route checks Auth0 session",
+      "Unauthenticated requests return 401",
+      "Non-admin authenticated users return 403",
+      "Test with missing session, expired session, and non-admin user"
+    ],
+    "passes": false,
+    "priority": 20
+  }
+]
