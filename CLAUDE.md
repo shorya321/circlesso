@@ -12,7 +12,7 @@ Admin dashboard for migrating ~30 existing Circle.so members (compass.helpucompl
 npm run dev              # Dev server on port 3001 (Turbopack)
 npm run build            # Production build
 npm test                 # Jest test suite
-npm test -- --testPathPattern=config  # Run single test file
+npx jest lib/config.test.ts          # Run single test file
 npm run test:coverage    # Jest with coverage report
 npm run lint             # ESLint
 npx tsc --noEmit         # Type check without emitting

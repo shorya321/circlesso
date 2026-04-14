@@ -13,7 +13,7 @@
       "Verify npm run dev starts without errors on port 3001",
       "Verify npm run build succeeds"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 1
   },
   {
@@ -30,7 +30,7 @@
       "App throws clear error on missing var",
       "Write unit test for config validation"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 2
   },
   {
@@ -48,7 +48,7 @@
       "Define Auth0User interface",
       "Verify types compile without errors"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 3
   },
   {
