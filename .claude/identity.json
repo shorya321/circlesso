@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "project": "circleso-admin",
+  "description": "Admin dashboard for Auth0 user provisioning and Circle.so member migration",
+  "technicalLevel": "technical",
+  "preferredStyle": {
+    "verbosity": "minimal",
+    "codeComments": false,
+    "explanations": true
+  },
+  "domains": ["typescript", "nextjs", "auth0", "api-integration"]
+}

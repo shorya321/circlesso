@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q '\\-\\-no-verify'; then echo 'BLOCK: Do not skip git hooks with --no-verify' >&2; exit 1; fi"
+          }
+        ],
+        "description": "Block --no-verify flag on git commits"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(echo \"$TOOL_INPUT\" | grep -o '\"file_path\":\"[^\"]*\"' | head -1 | sed 's/\"file_path\":\"//' | sed 's/\"//'); if echo \"$FILE\" | grep -qE '\\.tsx?$'; then echo 'TypeScript file modified — consider running npm run build to check types'; fi",
+            "timeout": 5000
+          }
+        ],
+        "description": "Reminder to type-check after editing TypeScript files"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Volumes/shorya/apps/circleso && git diff --name-only 2>/dev/null | grep -qE '\\.ts$|\\.tsx$' && echo 'Reminder: TypeScript files were modified. Run npm run build before committing.' || true",
+            "timeout": 10000
+          }
+        ],
+        "description": "Remind to build-check before session ends if TS files changed"
+      }
+    ]
+  }
+}
