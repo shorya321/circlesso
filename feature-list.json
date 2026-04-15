@@ -252,7 +252,7 @@
       "Show success toast on successful provisioning",
       "Test toast appears on API error simulation"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 12.5
   },
   {
