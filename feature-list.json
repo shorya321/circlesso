@@ -359,7 +359,7 @@
       "Verify welcome email received",
       "Verify member appears in Existing Members tab with 'Provisioned' status"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 18
   },
   {

@@ -92,4 +92,18 @@
   - 4 integration tests, all passing
 - Status: 19/25 features complete (F001-F017)
 - Total: 115 tests, all passing
-- Next: F018 (E2E add new member flow)
+- Implemented F018 (E2E add new member):
+  - Created app/api/__integration__/add-new-member.test.ts
+  - Full flow test: fetch access groups → create member (Circle + Auth0 + email) → verify in list
+  - Tests access group dropdown population (2 groups returned)
+  - Tests Circle.so member creation with correct community ID
+  - Tests access group assignment
+  - Tests Auth0 user creation with circle_member_id linkage
+  - Tests welcome email with password ticket URL
+  - Tests partial failure: access group fails → no Auth0 attempted
+  - Tests partial failure: Auth0 fails after Circle success
+  - Tests partial failure: email fails → auth0_created status, retry needed
+  - 4 integration tests, all passing
+- Status: 20/25 features complete (F001-F018)
+- Total: 119 tests, all passing
+- Next: F019 (duplicate detection)
