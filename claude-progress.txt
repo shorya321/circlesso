@@ -124,4 +124,13 @@
   - 4 integration tests, all passing
 - Status: 22/25 features complete (F001-F019B)
 - Total: 127 tests, all passing
-- Next: F019C (email status persistence)
+- Implemented F019C (email status persistence):
+  - Created app/api/__integration__/email-status-persistence.test.ts
+  - Tests status derivation: red (no Auth0), yellow (auth0_created), green (email_sent)
+  - Tests persistence across 3 page refreshes (simulating new tabs)
+  - Tests metadata contains email_sent=true and email_sent_at timestamp
+  - Tests missing app_metadata defaults to auth0_created (yellow)
+  - 3 integration tests, all passing
+- Status: 23/25 features complete (F001-F019C)
+- Total: 130 tests, all passing
+- Next: F020 (security — API route session/admin validation)

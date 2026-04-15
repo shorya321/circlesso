@@ -404,7 +404,7 @@
       "Check Auth0 Dashboard — confirm app_metadata has email_sent=true and email_sent_at",
       "Verify status derivation: no Auth0 user = red, Auth0 user without email_sent = yellow, with email_sent = green"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 19.7
   },
   {
