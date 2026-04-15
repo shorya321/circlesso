@@ -121,18 +121,21 @@ jest.mock("@auth0/nextjs-auth0/server", () => ({
   })),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const auth0Module = require("./auth0");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const auth0SdkModule = require("@auth0/nextjs-auth0/server");
+
 describe("Auth0 client", () => {
   it("exports auth0 instance with expected methods", () => {
-    const { auth0 } = require("./auth0");
-    expect(auth0).toBeDefined();
-    expect(auth0.middleware).toBeDefined();
-    expect(auth0.getSession).toBeDefined();
-    expect(auth0.withPageAuthRequired).toBeDefined();
-    expect(auth0.withApiAuthRequired).toBeDefined();
+    expect(auth0Module.auth0).toBeDefined();
+    expect(auth0Module.auth0.middleware).toBeDefined();
+    expect(auth0Module.auth0.getSession).toBeDefined();
+    expect(auth0Module.auth0.withPageAuthRequired).toBeDefined();
+    expect(auth0Module.auth0.withApiAuthRequired).toBeDefined();
   });
 
   it("creates Auth0Client from @auth0/nextjs-auth0/server", () => {
-    const { Auth0Client } = require("@auth0/nextjs-auth0/server");
-    expect(Auth0Client).toHaveBeenCalledTimes(1);
+    expect(auth0SdkModule.Auth0Client).toHaveBeenCalledTimes(1);
   });
 });

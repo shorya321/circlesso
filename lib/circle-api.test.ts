@@ -74,7 +74,7 @@ describe("listMembers", () => {
     // Verify first call
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
-      "https://app.circle.so/api/admin/v2/community_members?community_id=12345&per_page=100&page=1",
+      "https://app.circle.so/api/admin/v2/community_members?community_id=12345&per_page=100&page=1&status=all",
       expect.objectContaining({
         method: "GET",
         headers: {
@@ -86,7 +86,7 @@ describe("listMembers", () => {
     // Verify second call with page=2
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
-      "https://app.circle.so/api/admin/v2/community_members?community_id=12345&per_page=100&page=2",
+      "https://app.circle.so/api/admin/v2/community_members?community_id=12345&per_page=100&page=2&status=all",
       expect.objectContaining({ method: "GET" })
     );
   });
@@ -119,16 +119,20 @@ describe("listMembers", () => {
 });
 
 describe("createMember", () => {
-  it("creates a new community member", async () => {
+  it("creates a new community member and unwraps the community_member envelope", async () => {
     const newMember = makeMember(10, "new@test.com");
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => newMember,
+      json: async () => ({
+        message: "This user has been invited to the community.",
+        community_member: newMember,
+      }),
     });
 
     const result = await createMember("12345", "new@test.com", "New User");
 
     expect(result).toEqual(newMember);
+    expect(result.id).toBe(10);
     expect(mockFetch).toHaveBeenCalledWith(
       "https://app.circle.so/api/admin/v2/community_members",
       expect.objectContaining({
@@ -141,6 +145,17 @@ describe("createMember", () => {
         }),
       })
     );
+  });
+
+  it("throws when response is missing community_member.id", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: "created" }),
+    });
+
+    await expect(
+      createMember("12345", "weird@test.com", "Weird")
+    ).rejects.toThrow(/unexpected response shape/);
   });
 
   it("throws on API error", async () => {
@@ -179,14 +194,20 @@ describe("listAccessGroups", () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => groups,
+      json: async () => ({
+        page: 1,
+        per_page: 100,
+        has_next_page: false,
+        count: groups.length,
+        records: groups,
+      }),
     });
 
     const result = await listAccessGroups("12345");
 
     expect(result).toEqual(groups);
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://app.circle.so/api/admin/v2/access_groups?community_id=12345",
+      "https://app.circle.so/api/admin/v2/access_groups?community_id=12345&per_page=100",
       expect.objectContaining({
         method: "GET",
         headers: {
@@ -218,7 +239,7 @@ describe("addMemberToGroup", () => {
     await addMemberToGroup(1, "user@test.com");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://app.circle.so/api/admin/v2/access_groups/1/members",
+      "https://app.circle.so/api/admin/v2/access_groups/1/community_members",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({

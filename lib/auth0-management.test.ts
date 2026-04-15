@@ -4,13 +4,16 @@ import {
   createUser,
   createPasswordTicket,
   updateUserMetadata,
+  getUserRoles,
   _resetTokenCache,
+  Auth0RateLimitError,
 } from "./auth0-management";
 
 // Mock config
 jest.mock("./config", () => ({
   getConfig: () => ({
     AUTH0_DOMAIN: "test.us.auth0.com",
+    AUTH0_TENANT_DOMAIN: "test.us.auth0.com",
     AUTH0_M2M_CLIENT_ID: "test-client-id",
     AUTH0_M2M_CLIENT_SECRET: "test-client-secret",
     AUTH0_DB_CONNECTION: "Username-Password-Authentication",
@@ -150,6 +153,64 @@ describe("getUserByEmail", () => {
 
     await expect(getUserByEmail("test@example.com")).rejects.toThrow();
   });
+
+  it("throws Auth0RateLimitError with retryAfterMs parsed from Retry-After header on 429", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "retry-after" ? "3" : null,
+      },
+      json: async () => ({ message: "Rate limit exceeded" }),
+    });
+
+    let thrown: unknown;
+    try {
+      await getUserByEmail("test@example.com");
+    } catch (err) {
+      thrown = err;
+    }
+
+    expect(thrown).toBeInstanceOf(Auth0RateLimitError);
+    expect((thrown as Auth0RateLimitError).retryAfterMs).toBe(3000);
+    expect((thrown as Auth0RateLimitError).name).toBe("Auth0RateLimitError");
+  });
+
+  it("throws Auth0RateLimitError with default 2000ms retryAfterMs when Retry-After header is absent", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+      json: async () => ({ message: "Rate limit exceeded" }),
+    });
+
+    await expect(
+      getUserByEmail("test@example.com")
+    ).rejects.toMatchObject({
+      name: "Auth0RateLimitError",
+      retryAfterMs: 2000,
+    });
+  });
+
+  it("throws Auth0RateLimitError with default 2000ms retryAfterMs when Retry-After is non-numeric", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "retry-after" ? "not-a-number" : null,
+      },
+      json: async () => ({ message: "Rate limit exceeded" }),
+    });
+
+    await expect(
+      getUserByEmail("test@example.com")
+    ).rejects.toMatchObject({
+      name: "Auth0RateLimitError",
+      retryAfterMs: 2000,
+    });
+  });
 });
 
 describe("createUser", () => {
@@ -193,6 +254,7 @@ describe("createUser", () => {
           connection: "Username-Password-Authentication",
           password: "MockedRandomPassword123!@#abcdef",
           email_verified: false,
+          verify_email: false,
           name: "New User",
           app_metadata: {
             source: "admin_provisioning",
@@ -201,6 +263,31 @@ describe("createUser", () => {
         }),
       })
     );
+  });
+
+  it("sends verify_email: false to suppress Auth0's automatic verification email", async () => {
+    const mockUser = {
+      user_id: "auth0|suppress",
+      email: "quiet@example.com",
+      name: "Quiet User",
+      email_verified: false,
+      created_at: "2026-04-15T00:00:00.000Z",
+      app_metadata: { source: "admin_provisioning" },
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockUser,
+    });
+
+    await createUser("quiet@example.com", "Quiet User", {
+      source: "admin_provisioning",
+    });
+
+    const [, options] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    const sentBody = JSON.parse(options.body);
+    expect(sentBody.verify_email).toBe(false);
+    expect(sentBody.email_verified).toBe(false);
   });
 
   it("throws on 409 conflict with descriptive message", async () => {
@@ -269,6 +356,31 @@ describe("createPasswordTicket", () => {
     );
   });
 
+  it("rewrites the ticket host to AUTH0_DOMAIN when Auth0 returns the raw tenant host", async () => {
+    // Auth0 returns tickets pointing at the raw tenant domain
+    // (e.g. dev-xxx.us.auth0.com) even when the Management API is called
+    // against a custom domain. The helper must rewrite the host so the
+    // welcome email shows the branded custom domain (AUTH0_DOMAIN in this
+    // mock is "test.us.auth0.com").
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ticket:
+          "https://dev-nm78h40g55lhbjx8.us.auth0.com/lo/reset?ticket=abc123",
+      }),
+    });
+
+    const result = await createPasswordTicket(
+      "auth0|456",
+      "https://compass.helpucompli.com",
+      604800
+    );
+
+    expect(result.ticket).toBe(
+      "https://test.us.auth0.com/lo/reset?ticket=abc123"
+    );
+  });
+
   it("throws on API error", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -325,5 +437,75 @@ describe("updateUserMetadata", () => {
     await expect(
       updateUserMetadata("auth0|invalid", { email_sent: true })
     ).rejects.toThrow();
+  });
+});
+
+describe("getUserRoles", () => {
+  beforeEach(() => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "mgmt-token", expires_in: 86400 }),
+    });
+  });
+
+  it("returns user roles array on success", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { id: "rol_abc123", name: "admin", description: "Admin role" },
+        { id: "rol_def456", name: "user" },
+      ],
+    });
+
+    const roles = await getUserRoles("auth0|user-1");
+
+    expect(roles).toHaveLength(2);
+    expect(roles[0].name).toBe("admin");
+    expect(roles[1].name).toBe("user");
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "https://test.us.auth0.com/api/v2/users/auth0%7Cuser-1/roles",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer mgmt-token",
+        }),
+      })
+    );
+  });
+
+  it("returns empty array when user has no roles", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    });
+
+    const roles = await getUserRoles("auth0|user-2");
+    expect(roles).toEqual([]);
+  });
+
+  it("throws on API error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ message: "Insufficient scope: read:roles" }),
+    });
+
+    await expect(getUserRoles("auth0|user-3")).rejects.toThrow(
+      /getUserRoles failed/
+    );
+  });
+
+  it("URL-encodes the user id", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    });
+
+    await getUserRoles("auth0|complex+id@test");
+
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "https://test.us.auth0.com/api/v2/users/auth0%7Ccomplex%2Bid%40test/roles",
+      expect.any(Object)
+    );
   });
 });

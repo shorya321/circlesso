@@ -20,7 +20,7 @@ No database — with only ~30 members, the system queries Auth0 and Circle.so AP
 ## Architecture
 
 ```
-Admin (Auth0 org admin login)
+Admin (Auth0 user with 'superadmin' role)
   │
   ├── "Existing Members" tab
   │     │
@@ -62,7 +62,7 @@ Admin (Auth0 org admin login)
 | Framework | Next.js 16 (App Router) | Matches helpucompli-sso project |
 | Language | TypeScript (strict) | Type safety |
 | Database | None | Only ~30 members, query APIs directly |
-| Admin auth | Auth0 Regular Web App + @auth0/nextjs-auth0 v4 (org admin role) | Consistent with SSO setup |
+| Admin auth | Auth0 Regular Web App + @auth0/nextjs-auth0 v4 (Auth0 'superadmin' role enforced via Management API) | Consistent with SSO setup |
 | Auth0 provisioning | Separate M2M Application (not the Regular Web App) | Auth0 recommended, clean separation |
 | Auth0 API | Management API (M2M token) | Server-side user creation |
 | Circle API | Admin API v2 | List members, create members, manage access groups |
@@ -297,11 +297,14 @@ For "Migrate All" operations, process users sequentially with a 200ms delay betw
 
 ## Security
 
-- Admin dashboard protected by Auth0 login with org admin role check
+- Admin dashboard protected by Auth0 login + 'superadmin' role check (`lib/admin-check.ts`)
+- Role check fetches Auth0 user roles via Management API (requires `read:roles` + `read:role_members` M2M scopes); cached per user for 5 minutes
+- Role name configurable via `ADMIN_ROLE_NAME` env var (default: `superadmin`)
+- Non-superadmin authenticated users redirected to `/access-denied` (UI) or get HTTP 403 (API)
 - Auth0 M2M client_secret stored in env variable only
 - Circle API token stored in env variable only
 - Resend API key stored in env variable only
-- All API routes validate Auth0 session before processing
+- All API routes validate Auth0 session AND superadmin role before processing
 - Password-change ticket URLs are single-use
 - Random passwords generated with crypto.randomBytes (never stored or shown)
 - No secrets in client-side code (all API calls from server-side route handlers)

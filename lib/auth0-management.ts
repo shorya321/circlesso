@@ -1,7 +1,38 @@
 // Auth0 Management API client — M2M token + user CRUD
 import { getConfig } from "./config";
 import { generateRandomPassword } from "./utils";
-import type { Auth0User, Auth0PasswordTicket, Auth0AppMetadata } from "@/types";
+import type {
+  Auth0User,
+  Auth0PasswordTicket,
+  Auth0AppMetadata,
+  Auth0Role,
+} from "@/types";
+
+/**
+ * Thrown when Auth0 Management API returns HTTP 429.
+ * `retryAfterMs` is parsed from the `Retry-After` response header (seconds,
+ * per RFC 6585) and falls back to 2000ms when the header is absent or invalid.
+ * Callers that retry Auth0 requests should honor this value instead of
+ * applying a generic exponential backoff.
+ */
+export class Auth0RateLimitError extends Error {
+  readonly retryAfterMs: number;
+
+  constructor(retryAfterMs: number, message: string) {
+    super(message);
+    this.name = "Auth0RateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+const DEFAULT_RETRY_AFTER_MS = 2000;
+
+function parseRetryAfterMs(headerValue: string | null): number {
+  if (!headerValue) return DEFAULT_RETRY_AFTER_MS;
+  const seconds = Number.parseInt(headerValue, 10);
+  if (!Number.isFinite(seconds) || seconds < 0) return DEFAULT_RETRY_AFTER_MS;
+  return seconds * 1000;
+}
 
 // M2M token cache
 let cachedToken: string | null = null;
@@ -30,7 +61,7 @@ export async function getManagementToken(): Promise<string> {
       grant_type: "client_credentials",
       client_id: config.AUTH0_M2M_CLIENT_ID,
       client_secret: config.AUTH0_M2M_CLIENT_SECRET,
-      audience: `https://${config.AUTH0_DOMAIN}/api/v2/`,
+      audience: `https://${config.AUTH0_TENANT_DOMAIN}/api/v2/`,
     }),
   });
 
@@ -70,6 +101,15 @@ export async function getUserByEmail(
   );
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after")
+      );
+      throw new Auth0RateLimitError(
+        retryAfterMs,
+        `Auth0 getUserByEmail rate-limited (429); retry after ${retryAfterMs}ms`
+      );
+    }
     const error = await response.json();
     throw new Error(
       `Auth0 getUserByEmail failed: ${error.message || response.status}`
@@ -100,11 +140,17 @@ export async function createUser(
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
+      // verify_email: false overrides the connection-level "Send Verification
+      // Email" default so Auth0 does NOT send its own verification email at
+      // creation. The user will get exactly one email — our branded welcome
+      // email from Resend — and the address is verified when they click the
+      // password-change ticket (mark_email_as_verified: true).
       body: JSON.stringify({
         email,
         connection: config.AUTH0_DB_CONNECTION,
         password: generateRandomPassword(),
         email_verified: false,
+        verify_email: false,
         name,
         app_metadata: metadata,
       }),
@@ -128,6 +174,11 @@ export async function createUser(
  * Generate a password-change ticket for the given user.
  * Sets mark_email_as_verified: true so the user's email is verified
  * when they click the link.
+ *
+ * Auth0 returns the ticket URL with the raw tenant domain (e.g.
+ * `dev-xxx.us.auth0.com`) even when the Management API is called
+ * against a custom domain. We rewrite the host to `AUTH0_DOMAIN` so the
+ * link in the welcome email shows the branded custom domain.
  */
 export async function createPasswordTicket(
   userId: string,
@@ -161,7 +212,15 @@ export async function createPasswordTicket(
     );
   }
 
-  return response.json();
+  const data: Auth0PasswordTicket = await response.json();
+
+  try {
+    const ticketUrl = new URL(data.ticket);
+    ticketUrl.host = config.AUTH0_DOMAIN;
+    return { ticket: ticketUrl.toString() };
+  } catch {
+    return data;
+  }
 }
 
 /**
@@ -195,4 +254,33 @@ export async function updateUserMetadata(
       `Auth0 updateUserMetadata failed: ${error.message || response.status}`
     );
   }
+}
+
+/**
+ * Fetch the roles assigned to an Auth0 user.
+ * Requires the M2M app to have read:roles and read:role_members scopes.
+ */
+export async function getUserRoles(userId: string): Promise<Auth0Role[]> {
+  const config = getConfig();
+  const token = await getManagementToken();
+
+  const response = await fetch(
+    `https://${config.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}/roles`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(
+      `Auth0 getUserRoles failed: ${error.message || response.status}`
+    );
+  }
+
+  return response.json();
 }

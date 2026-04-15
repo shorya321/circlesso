@@ -3,6 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   // Auth0 Management API (M2M)
   AUTH0_DOMAIN: z.string().min(1, "AUTH0_DOMAIN is required"),
+  AUTH0_TENANT_DOMAIN: z.string().min(1, "AUTH0_TENANT_DOMAIN is required"),
   AUTH0_M2M_CLIENT_ID: z.string().min(1, "AUTH0_M2M_CLIENT_ID is required"),
   AUTH0_M2M_CLIENT_SECRET: z.string().min(1, "AUTH0_M2M_CLIENT_SECRET is required"),
   AUTH0_DB_CONNECTION: z.string().default("Username-Password-Authentication"),
@@ -24,6 +25,9 @@ const envSchema = z.object({
   // Provisioning Config
   PASSWORD_TICKET_TTL: z.coerce.number().int().positive().default(604800),
   PASSWORD_TICKET_RESULT_URL: z.string().url("PASSWORD_TICKET_RESULT_URL must be a valid URL"),
+
+  // Admin Role (Auth0 role name for dashboard access)
+  ADMIN_ROLE_NAME: z.string().default("superadmin"),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

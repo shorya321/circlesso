@@ -22,7 +22,8 @@ npx tsc --noEmit         # Type check without emitting
 
 Two auth systems, one dashboard:
 
-- **Admin login**: `@auth0/nextjs-auth0` v4 — Regular Web Application, org admin role check via `proxy.ts` (Next.js 16 replaces middleware.ts)
+- **Admin login**: `@auth0/nextjs-auth0` v4 — Regular Web Application. Session protection via `proxy.ts` (Next.js 16 replaces middleware.ts).
+- **Admin role enforcement**: `lib/admin-check.ts` calls `getUserRoles()` via Auth0 Management API and checks for `ADMIN_ROLE_NAME` (default `superadmin`). Enforced in `app/dashboard/layout.tsx` (redirects non-admins to `/access-denied`) and all 5 API routes (returns 401/403). Cached per user for 5 minutes. Requires M2M scopes `read:roles` + `read:role_members`.
 - **User provisioning**: Auth0 Management API via separate M2M application (`lib/auth0-management.ts`)
 - **Member data**: Circle.so Admin API v2 at `https://app.circle.so/api/admin/v2` with `Bearer` token (`lib/circle-api.ts`)
 - **Email**: Resend API with React Email template (`emails/welcome-email.tsx` + `lib/resend-email.ts`)

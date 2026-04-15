@@ -19,9 +19,11 @@ import { GET as getAccessGroups } from "../circle/access-groups/route";
 import { GET as getMembers } from "../circle/members/route";
 import { POST as createMember } from "../provision/create/route";
 import { NextRequest } from "next/server";
-import { auth0 } from "@/lib/auth0";
 
-const mockGetSession = auth0.getSession as jest.Mock;
+const mockCheckAdminAccess = jest.fn();
+jest.mock("@/lib/admin-check", () => ({
+  checkAdminAccess: (...args: unknown[]) => mockCheckAdminAccess(...args),
+}));
 
 // --- Mock config ---
 jest.mock("@/lib/config", () => ({
@@ -75,8 +77,11 @@ function makePostRequest(body: Record<string, unknown>) {
 }
 
 function authenticateSession() {
-  mockGetSession.mockResolvedValueOnce({
-    user: { sub: "auth0|admin-1", email: "admin@helpucompli.com" },
+  mockCheckAdminAccess.mockResolvedValueOnce({
+    isAuthenticated: true,
+    isAdmin: true,
+    userId: "auth0|admin-1",
+    email: "admin@helpucompli.com",
   });
 }
 
@@ -152,6 +157,7 @@ describe("F018: End-to-end add one new member", () => {
     expect(createData.status).toBe("email_sent");
     expect(createData.auth0UserId).toBe("auth0|alice-501");
     expect(createData.emailSent).toBe(true);
+    expect(createData.accessGroupAssigned).toBe(true);
 
     // Verify Circle.so member was created
     expect(mockCreateMember).toHaveBeenCalledWith(
@@ -227,7 +233,7 @@ describe("F018: End-to-end add one new member", () => {
     expect(members[0].auth0UserId).toBe("auth0|alice-501");
   });
 
-  it("handles access group assignment failure gracefully", async () => {
+  it("continues Auth0 provisioning when access group assignment fails", async () => {
     authenticateSession();
     mockCreateMember.mockResolvedValueOnce({
       id: 502,
@@ -238,6 +244,16 @@ describe("F018: End-to-end add one new member", () => {
     mockAddMemberToGroup.mockRejectedValueOnce(
       new Error("Access group not found")
     );
+    mockCreateUser.mockResolvedValueOnce({
+      user_id: "auth0|bob-502",
+      email: "bob@newcorp.com",
+      name: "Bob Williams",
+    });
+    mockCreatePasswordTicket.mockResolvedValueOnce({
+      ticket: "https://helpucompli.us.auth0.com/lo/reset?ticket=bob",
+    });
+    mockSendWelcomeEmail.mockResolvedValueOnce({ id: "email-bob-002" });
+    mockUpdateUserMetadata.mockResolvedValueOnce(undefined);
 
     const response = await createMember(
       makePostRequest({
@@ -249,11 +265,26 @@ describe("F018: End-to-end add one new member", () => {
     );
     const data = await response.json();
 
-    // Circle member was created but access group failed
-    expect(data.status).toBe("failed");
-    expect(data.error).toContain("access group assignment failed");
-    // Auth0 creation should NOT have been attempted
-    expect(mockCreateUser).not.toHaveBeenCalled();
+    // Access-group failure is a warning, not a hard error — provisioning continues.
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.status).toBe("email_sent");
+    expect(data.accessGroupAssigned).toBe(false);
+    expect(data.warning).toContain("access group");
+    expect(data.auth0UserId).toBe("auth0|bob-502");
+    expect(data.emailSent).toBe(true);
+
+    // Auth0 + ticket + email must all have fired despite access-group failure.
+    expect(mockCreateUser).toHaveBeenCalledWith(
+      "bob@newcorp.com",
+      "Bob Williams",
+      expect.objectContaining({
+        source: "admin_provisioning",
+        circle_member_id: "502",
+      })
+    );
+    expect(mockCreatePasswordTicket).toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).toHaveBeenCalled();
   });
 
   it("handles Auth0 creation failure after Circle.so success", async () => {
@@ -314,7 +345,7 @@ describe("F018: End-to-end add one new member", () => {
     expect(data.success).toBe(true);
     expect(data.status).toBe("auth0_created");
     expect(data.emailSent).toBe(false);
-    expect(data.error).toContain("welcome email failed");
+    expect(data.error).toMatch(/welcome email failed/i);
 
     // Metadata should be updated with email_sent=false
     expect(mockUpdateUserMetadata).toHaveBeenCalledWith(

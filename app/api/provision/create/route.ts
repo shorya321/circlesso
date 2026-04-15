@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { auth0 } from "@/lib/auth0";
+import { checkAdminAccess } from "@/lib/admin-check";
 import { getConfig } from "@/lib/config";
 import { createMember, addMemberToGroup } from "@/lib/circle-api";
 import {
@@ -21,9 +21,15 @@ const createMemberSchema = z.object({
 
 // POST /api/provision/create — create new member in Circle.so + Auth0
 export async function POST(request: NextRequest) {
-  const session = await auth0.getSession();
-  if (!session) {
+  const access = await checkAdminAccess();
+  if (!access.isAuthenticated) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!access.isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: superadmin role required" },
+      { status: 403 }
+    );
   }
 
   let body: z.infer<typeof createMemberSchema>;
@@ -47,15 +53,20 @@ export async function POST(request: NextRequest) {
       fullName
     );
 
-    // Step 2: Add to access group
+    // Step 2: Add to access group — non-fatal. Per design spec, a failure here
+    // is a warning; Auth0 provisioning still continues so the user gets an account.
+    let accessGroupAssigned = true;
+    let accessGroupWarning: string | undefined;
     try {
       await addMemberToGroup(body.accessGroupId, body.email);
-    } catch {
-      return NextResponse.json<ProvisionResult>({
-        success: true,
-        status: "failed",
-        error:
-          "Member created in Circle.so but access group assignment failed. Assign manually in Circle dashboard.",
+    } catch (error: unknown) {
+      accessGroupAssigned = false;
+      accessGroupWarning =
+        "Member created but NOT added to the access group. Assign manually in Circle dashboard.";
+      console.error("addMemberToGroup failed", {
+        email: body.email,
+        accessGroupId: body.accessGroupId,
+        error: error instanceof Error ? error.message : error,
       });
     }
 
@@ -73,6 +84,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           status: "failed",
+          accessGroupAssigned,
           error: `Created in Circle.so but Auth0 failed: ${message}`,
         },
         { status: 500 }
@@ -100,19 +112,34 @@ export async function POST(request: NextRequest) {
         status: "email_sent",
         auth0UserId: auth0User.user_id,
         emailSent: true,
+        accessGroupAssigned,
+        warning: accessGroupWarning,
       });
-    } catch {
-      await updateUserMetadata(auth0User.user_id, {
-        email_sent: false,
+    } catch (error: unknown) {
+      const emailErrorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("sendWelcomeEmail failed", {
+        email: body.email,
+        auth0UserId: auth0User.user_id,
+        from: config.EMAIL_FROM,
+        error: emailErrorMessage,
       });
+      try {
+        await updateUserMetadata(auth0User.user_id, {
+          email_sent: false,
+        });
+      } catch {
+        // swallowed — metadata rollback is best-effort, primary error is the Resend failure
+      }
 
       return NextResponse.json<ProvisionResult>({
         success: true,
         status: "auth0_created",
         auth0UserId: auth0User.user_id,
         emailSent: false,
-        error:
-          "Member created and Auth0 account set up, but welcome email failed. Use Retry Email.",
+        accessGroupAssigned,
+        warning: accessGroupWarning,
+        error: `Welcome email failed: ${emailErrorMessage}. Use Retry Email.`,
       });
     }
   } catch (error: unknown) {

@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import { auth0 } from "@/lib/auth0";
+import { checkAdminAccess } from "@/lib/admin-check";
 import { getConfig } from "@/lib/config";
 import { listAccessGroups } from "@/lib/circle-api";
 
 // GET /api/circle/access-groups — list Circle.so access groups
 export async function GET() {
-  const session = await auth0.getSession();
-  if (!session) {
+  const access = await checkAdminAccess();
+  if (!access.isAuthenticated) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!access.isAdmin) {
+    return NextResponse.json(
+      { error: "Forbidden: superadmin role required" },
+      { status: 403 }
+    );
   }
 
   try {

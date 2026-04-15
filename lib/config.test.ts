@@ -2,6 +2,7 @@ import { getConfig, resetConfig } from "./config";
 
 const VALID_ENV = {
   AUTH0_DOMAIN: "test.us.auth0.com",
+  AUTH0_TENANT_DOMAIN: "test.us.auth0.com",
   AUTH0_M2M_CLIENT_ID: "m2m-client-id",
   AUTH0_M2M_CLIENT_SECRET: "m2m-client-secret",
   AUTH0_DB_CONNECTION: "Username-Password-Authentication",
@@ -106,14 +107,14 @@ describe("getConfig", () => {
   });
 
   it("caches config on repeated calls", () => {
-    const first = getConfig();
+    const cached = getConfig();
     process.env.AUTH0_DOMAIN = "changed.auth0.com";
     const second = getConfig();
-    expect(second.AUTH0_DOMAIN).toBe(first.AUTH0_DOMAIN);
+    expect(second.AUTH0_DOMAIN).toBe(cached.AUTH0_DOMAIN);
   });
 
   it("resets cache with resetConfig", () => {
-    const first = getConfig();
+    getConfig(); // populate cache
     resetConfig();
     process.env.AUTH0_DOMAIN = "changed.auth0.com";
     const second = getConfig();

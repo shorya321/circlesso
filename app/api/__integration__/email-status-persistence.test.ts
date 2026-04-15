@@ -20,9 +20,11 @@ jest.mock("@auth0/nextjs-auth0/server", () => ({
 import { GET as getMembers } from "../circle/members/route";
 import { POST as migrateUser } from "../provision/migrate/route";
 import { NextRequest } from "next/server";
-import { auth0 } from "@/lib/auth0";
 
-const mockGetSession = auth0.getSession as jest.Mock;
+const mockCheckAdminAccess = jest.fn();
+jest.mock("@/lib/admin-check", () => ({
+  checkAdminAccess: (...args: unknown[]) => mockCheckAdminAccess(...args),
+}));
 
 jest.mock("@/lib/config", () => ({
   getConfig: () => ({
@@ -82,8 +84,11 @@ const CIRCLE_MEMBERS = [
 ];
 
 function authenticateSession() {
-  mockGetSession.mockResolvedValueOnce({
-    user: { sub: "auth0|admin-1", email: "admin@helpucompli.com" },
+  mockCheckAdminAccess.mockResolvedValueOnce({
+    isAuthenticated: true,
+    isAdmin: true,
+    userId: "auth0|admin-1",
+    email: "admin@helpucompli.com",
   });
 }
 

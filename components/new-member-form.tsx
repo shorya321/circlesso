@@ -76,12 +76,18 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
         return;
       }
 
-      if (result.emailSent) {
-        toast.success("Member created and welcome email sent");
-      } else {
+      if (result.accessGroupAssigned === false) {
         toast.warning(
-          "Member created but welcome email failed. Use Retry Email from the Existing Members tab."
+          result.warning ??
+            "Member created but NOT added to the access group. Assign manually in Circle dashboard."
         );
+      } else if (!result.emailSent) {
+        toast.warning(
+          result.error ??
+            "Member created but welcome email failed. Use Retry Email from the Existing Members tab."
+        );
+      } else {
+        toast.success("Member created and welcome email sent");
       }
 
       resetForm();

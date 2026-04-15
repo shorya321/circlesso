@@ -13,8 +13,29 @@ jest.mock("@auth0/nextjs-auth0/server", () => ({
 import { POST } from "./route";
 import { NextRequest } from "next/server";
 
-const { auth0 } = require("@/lib/auth0");
-const mockGetSession = auth0.getSession as jest.Mock;
+const mockCheckAdminAccess = jest.fn();
+jest.mock("@/lib/admin-check", () => ({
+  checkAdminAccess: (...args: unknown[]) => mockCheckAdminAccess(...args),
+}));
+
+const ADMIN_ACCESS = {
+  isAuthenticated: true,
+  isAdmin: true,
+  userId: "auth0|admin",
+  email: "admin@example.com",
+};
+const NO_SESSION = {
+  isAuthenticated: false,
+  isAdmin: false,
+  userId: null,
+  email: null,
+};
+const NON_ADMIN_ACCESS = {
+  isAuthenticated: true,
+  isAdmin: false,
+  userId: "auth0|user",
+  email: "user@example.com",
+};
 
 jest.mock("@/lib/config", () => ({
   getConfig: () => ({
@@ -55,21 +76,29 @@ function makeRequest(body: Record<string, unknown>) {
 
 describe("POST /api/provision/migrate", () => {
   it("returns 401 when not authenticated", async () => {
-    mockGetSession.mockResolvedValueOnce(null);
+    mockCheckAdminAccess.mockResolvedValueOnce(NO_SESSION);
     const response = await POST(
       makeRequest({ email: "a@test.com", name: "A", circleMemberId: "1" })
     );
     expect(response.status).toBe(401);
   });
 
+  it("returns 403 when authenticated but not admin", async () => {
+    mockCheckAdminAccess.mockResolvedValueOnce(NON_ADMIN_ACCESS);
+    const response = await POST(
+      makeRequest({ email: "a@test.com", name: "A", circleMemberId: "1" })
+    );
+    expect(response.status).toBe(403);
+  });
+
   it("returns 400 on invalid body", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { sub: "admin" } });
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     const response = await POST(makeRequest({ email: "not-an-email" }));
     expect(response.status).toBe(400);
   });
 
   it("returns already provisioned when user exists", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { sub: "admin" } });
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     mockGetUserByEmail.mockResolvedValueOnce({
       user_id: "auth0|existing",
       app_metadata: { email_sent: true },
@@ -86,7 +115,7 @@ describe("POST /api/provision/migrate", () => {
   });
 
   it("provisions a new user end-to-end", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { sub: "admin" } });
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     mockGetUserByEmail.mockResolvedValueOnce(null);
     mockCreateUser.mockResolvedValueOnce({ user_id: "auth0|new" });
     mockCreatePasswordTicket.mockResolvedValueOnce({
@@ -115,7 +144,7 @@ describe("POST /api/provision/migrate", () => {
   });
 
   it("handles email failure gracefully (auth0_created status)", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { sub: "admin" } });
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     mockGetUserByEmail.mockResolvedValueOnce(null);
     mockCreateUser.mockResolvedValueOnce({ user_id: "auth0|new" });
     mockCreatePasswordTicket.mockResolvedValueOnce({

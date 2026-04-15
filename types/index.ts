@@ -58,6 +58,12 @@ export interface Auth0PasswordTicket {
   ticket: string;
 }
 
+export interface Auth0Role {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 // Provisioning types
 
 export type ProvisioningStatus =
@@ -91,5 +97,7 @@ export interface ProvisionResult {
   status: ProvisioningStatus;
   auth0UserId?: string;
   emailSent?: boolean;
+  accessGroupAssigned?: boolean;
+  warning?: string;
   error?: string;
 }

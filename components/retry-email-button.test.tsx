@@ -25,7 +25,7 @@ describe("RetryEmailButton", () => {
     expect(screen.getByRole("button", { name: /retry email/i })).toBeTruthy();
   });
 
-  it("calls provision/migrate API on click", async () => {
+  it("calls provision/retry-email API on click with auth0UserId body", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ success: true, status: "email_sent", emailSent: true }),
@@ -45,9 +45,16 @@ describe("RetryEmailButton", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/provision/migrate",
+        "/api/provision/retry-email",
         expect.objectContaining({ method: "POST" })
       );
+    });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      email: "test@example.com",
+      name: "Test User",
+      auth0UserId: "auth0|123",
     });
 
     await waitFor(() => {

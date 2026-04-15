@@ -108,4 +108,194 @@ describe("MemberTable", () => {
 
     expect(screen.getByText(/no members found/i)).toBeTruthy();
   });
+
+  describe("action cell per status", () => {
+    it("renders em-dash placeholder for email_sent members", () => {
+      const members = [makeMember(1, "done@test.com", "email_sent")];
+      const { container } = render(
+        <MemberTable members={members} onMemberUpdated={jest.fn()} />
+      );
+
+      const actionCell = container.querySelectorAll("tbody td")[3];
+      expect(actionCell?.textContent).toContain("—");
+      expect(
+        screen.queryByRole("button", { name: /migrate/i })
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: /retry email/i })
+      ).toBeNull();
+    });
+
+    it("does not render Migrate button for email_sent members", () => {
+      const members = [makeMember(1, "a@test.com", "email_sent")];
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.queryByRole("button", { name: /migrate/i })).toBeNull();
+    });
+
+    it("renders Retry Check button for failed members", () => {
+      const members = [makeMember(1, "oops@test.com", "failed")];
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(
+        screen.getByRole("button", { name: /retry check/i })
+      ).toBeTruthy();
+    });
+
+    it("does not render Migrate button for failed members", () => {
+      const members = [makeMember(1, "oops@test.com", "failed")];
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.queryByRole("button", { name: /migrate/i })).toBeNull();
+    });
+
+    it("Retry Check button calls onMemberUpdated on click", () => {
+      const onMemberUpdated = jest.fn();
+      const members = [makeMember(1, "oops@test.com", "failed")];
+      render(
+        <MemberTable members={members} onMemberUpdated={onMemberUpdated} />
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /retry check/i }));
+      expect(onMemberUpdated).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders an action affordance for every visible row across pages", () => {
+      const members: MemberWithStatus[] = Array.from(
+        { length: 25 },
+        (_, i) => makeMember(i + 1, `user${i + 1}@test.com`, "email_sent")
+      );
+      const { container } = render(
+        <MemberTable members={members} onMemberUpdated={jest.fn()} />
+      );
+
+      const assertAllActionCellsHaveContent = () => {
+        const rows = container.querySelectorAll("tbody tr");
+        rows.forEach((row) => {
+          const actionCell = row.querySelectorAll("td")[3];
+          expect(actionCell?.textContent?.trim().length).toBeGreaterThan(0);
+        });
+      };
+
+      assertAllActionCellsHaveContent();
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      assertAllActionCellsHaveContent();
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      assertAllActionCellsHaveContent();
+    });
+  });
+
+  describe("pagination", () => {
+    const makeMembers = (count: number): MemberWithStatus[] =>
+      Array.from({ length: count }, (_, i) =>
+        makeMember(i + 1, `user${i + 1}@test.com`)
+      );
+
+    it("renders only the first 10 members on initial render when there are 25", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.getByText("user1@test.com")).toBeTruthy();
+      expect(screen.getByText("user10@test.com")).toBeTruthy();
+      expect(screen.queryByText("user11@test.com")).toBeNull();
+      expect(screen.queryByText("user25@test.com")).toBeNull();
+    });
+
+    it("renders pagination summary text", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.getByText(/showing 1.*10.*of 25 members/i)).toBeTruthy();
+    });
+
+    it("advances to page 2 on Next click", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+      expect(screen.queryByText("user1@test.com")).toBeNull();
+      expect(screen.getByText("user11@test.com")).toBeTruthy();
+      expect(screen.getByText("user20@test.com")).toBeTruthy();
+      expect(screen.getByText(/showing 11.*20.*of 25 members/i)).toBeTruthy();
+    });
+
+    it("disables Next on the last page", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      const next = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(next);
+      fireEvent.click(next);
+
+      expect(screen.getByText("user21@test.com")).toBeTruthy();
+      expect(screen.getByText("user25@test.com")).toBeTruthy();
+      expect((next as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("disables Previous on page 1", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      const prev = screen.getByRole("button", { name: /previous/i });
+      expect((prev as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("goes back to page 1 on Previous click", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      fireEvent.click(screen.getByRole("button", { name: /previous/i }));
+
+      expect(screen.getByText("user1@test.com")).toBeTruthy();
+      expect(screen.getByText("user10@test.com")).toBeTruthy();
+    });
+
+    it("does not render pagination footer when members fit on one page", () => {
+      const members = makeMembers(5);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.queryByRole("button", { name: /next/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /previous/i })).toBeNull();
+      expect(screen.queryByText(/showing/i)).toBeNull();
+    });
+
+    it("does not render pagination footer when members count equals page size", () => {
+      const members = makeMembers(10);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.queryByRole("button", { name: /next/i })).toBeNull();
+    });
+
+    it("resets to page 1 when members array length changes", () => {
+      const members = makeMembers(25);
+      const { rerender } = render(
+        <MemberTable members={members} onMemberUpdated={jest.fn()} />
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      expect(screen.getByText("user11@test.com")).toBeTruthy();
+
+      rerender(
+        <MemberTable members={makeMembers(30)} onMemberUpdated={jest.fn()} />
+      );
+
+      expect(screen.getByText("user1@test.com")).toBeTruthy();
+      expect(screen.getByText("user10@test.com")).toBeTruthy();
+      expect(screen.queryByText("user11@test.com")).toBeNull();
+    });
+
+    it("displays current page number and total pages", () => {
+      const members = makeMembers(25);
+      render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+      expect(screen.getByText(/page 1 of 3/i)).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+      expect(screen.getByText(/page 2 of 3/i)).toBeTruthy();
+    });
+  });
 });

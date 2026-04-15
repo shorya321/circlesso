@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth0 } from "@/lib/auth0";
+import { checkAdminAccess } from "@/lib/admin-check";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
 export default async function DashboardLayout({
@@ -7,14 +8,19 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth0.getSession();
+  const access = await checkAdminAccess();
 
-  if (!session) {
+  if (!access.isAuthenticated) {
     redirect("/auth/login");
   }
 
-  const userName = (session.user.name as string) ?? null;
-  const userEmail = (session.user.email as string) ?? null;
+  if (!access.isAdmin) {
+    redirect("/access-denied");
+  }
+
+  const session = await auth0.getSession();
+  const userName = (session?.user.name as string) ?? null;
+  const userEmail = (session?.user.email as string) ?? null;
 
   return (
     <div className="flex min-h-screen bg-background">

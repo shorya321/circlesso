@@ -26,9 +26,11 @@ import { GET as getMembers } from "../circle/members/route";
 import { POST as createMember } from "../provision/create/route";
 import { POST as migrateUser } from "../provision/migrate/route";
 import { NextRequest } from "next/server";
-import { auth0 } from "@/lib/auth0";
 
-const mockGetSession = auth0.getSession as jest.Mock;
+const mockCheckAdminAccess = jest.fn();
+jest.mock("@/lib/admin-check", () => ({
+  checkAdminAccess: (...args: unknown[]) => mockCheckAdminAccess(...args),
+}));
 
 // --- Mock config ---
 jest.mock("@/lib/config", () => ({
@@ -88,8 +90,11 @@ function makeMigrateRequest(body: Record<string, unknown>) {
 }
 
 function authenticateSession() {
-  mockGetSession.mockResolvedValueOnce({
-    user: { sub: "auth0|admin-1", email: "admin@helpucompli.com" },
+  mockCheckAdminAccess.mockResolvedValueOnce({
+    isAuthenticated: true,
+    isAdmin: true,
+    userId: "auth0|admin-1",
+    email: "admin@helpucompli.com",
   });
 }
 
@@ -357,7 +362,7 @@ describe("F019B: Partial failure recovery", () => {
       expect(data.success).toBe(true);
       expect(data.status).toBe("auth0_created");
       expect(data.emailSent).toBe(false);
-      expect(data.error).toContain("welcome email failed");
+      expect(data.error).toMatch(/welcome email failed/i);
 
       // Metadata should reflect email_sent=false for retry
       expect(mockUpdateUserMetadata).toHaveBeenCalledWith(

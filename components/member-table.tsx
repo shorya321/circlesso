@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -16,6 +22,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { RetryEmailButton } from "@/components/retry-email-button";
 import type { MemberWithStatus, ProvisionResult } from "@/types";
 
+const PAGE_SIZE = 10;
+
 interface MemberTableProps {
   members: MemberWithStatus[];
   onMemberUpdated: () => void;
@@ -23,6 +31,18 @@ interface MemberTableProps {
 
 export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [members.length]);
+
+  const totalPages = Math.max(1, Math.ceil(members.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, members.length);
+  const visibleMembers = members.slice(startIndex, endIndex);
+  const showPagination = members.length > PAGE_SIZE;
 
   const handleMigrate = async (member: MemberWithStatus) => {
     const memberId = member.circleMember.id;
@@ -67,6 +87,53 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
     }
   };
 
+  const renderAction = (member: MemberWithStatus, isLoading: boolean) => {
+    switch (member.auth0Status) {
+      case "not_provisioned":
+        return (
+          <Button
+            size="sm"
+            disabled={isLoading}
+            onClick={() => handleMigrate(member)}
+            className="cursor-pointer"
+          >
+            {isLoading ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <ArrowRight className="mr-1 h-3 w-3" />
+            )}
+            Migrate
+          </Button>
+        );
+      case "auth0_created":
+        return member.auth0UserId ? (
+          <RetryEmailButton
+            email={member.circleMember.email}
+            name={member.circleMember.name}
+            auth0UserId={member.auth0UserId}
+            onRetried={onMemberUpdated}
+          />
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        );
+      case "email_sent":
+        return <span className="text-sm text-muted-foreground">—</span>;
+      case "failed":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMemberUpdated}
+            className="cursor-pointer"
+            title={member.errorMessage ?? "Auth0 check failed — click to retry"}
+          >
+            <RefreshCw className="mr-1 h-3 w-3" />
+            Retry Check
+          </Button>
+        );
+    }
+  };
+
   if (members.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -76,7 +143,8 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
   }
 
   return (
-    <Table>
+    <div>
+      <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
@@ -86,10 +154,8 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {members.map((member) => {
+        {visibleMembers.map((member) => {
           const isLoading = loadingIds.has(member.circleMember.id);
-          const showMigrate = member.auth0Status === "not_provisioned";
-          const showRetry = member.auth0Status === "auth0_created";
 
           return (
             <TableRow key={member.circleMember.id}>
@@ -103,34 +169,47 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
                 <StatusBadge status={member.auth0Status} />
               </TableCell>
               <TableCell className="text-right">
-                {showMigrate && (
-                  <Button
-                    size="sm"
-                    disabled={isLoading}
-                    onClick={() => handleMigrate(member)}
-                    className="cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : (
-                      <ArrowRight className="mr-1 h-3 w-3" />
-                    )}
-                    Migrate
-                  </Button>
-                )}
-                {showRetry && member.auth0UserId && (
-                  <RetryEmailButton
-                    email={member.circleMember.email}
-                    name={member.circleMember.name}
-                    auth0UserId={member.auth0UserId}
-                    onRetried={onMemberUpdated}
-                  />
-                )}
+                {renderAction(member, isLoading)}
               </TableCell>
             </TableRow>
           );
         })}
       </TableBody>
     </Table>
+      {showPagination && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startIndex + 1}–{endIndex} of {members.length} members
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="cursor-pointer"
+            >
+              <ChevronLeft className="mr-1 h-3 w-3" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {safePage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage === totalPages}
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              className="cursor-pointer"
+            >
+              Next
+              <ChevronRight className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

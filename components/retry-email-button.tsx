@@ -25,13 +25,13 @@ export function RetryEmailButton({
     setLoading(true);
 
     try {
-      const response = await fetch("/api/provision/migrate", {
+      const response = await fetch("/api/provision/retry-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           name,
-          circleMemberId: auth0UserId,
+          auth0UserId,
         }),
       });
 
@@ -42,12 +42,7 @@ export function RetryEmailButton({
         return;
       }
 
-      if (result.emailSent) {
-        toast.success(`Welcome email resent to ${name}`);
-      } else {
-        toast.warning("Email retry failed. Please try again.");
-      }
-
+      toast.success(`Welcome email resent to ${name}`);
       onRetried();
     } catch {
       toast.error("Failed to retry email");

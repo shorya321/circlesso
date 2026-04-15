@@ -60,7 +60,7 @@
       "Configure route matcher for /dashboard/:path*",
       "Create app/api/auth/[auth0]/route.ts for login/logout/callback",
       "Verify unauthenticated access to /dashboard redirects to Auth0 login",
-      "Verify authenticated admin can access /dashboard",
+      "Verify authenticated superadmin (Auth0 role 'superadmin') can access /dashboard",
       "Write test for middleware route protection"
     ],
     "passes": true,
@@ -227,14 +227,14 @@
   {
     "id": "F012",
     "category": "ui",
-    "description": "Dashboard layout with navigation — auth-protected with Auth0 org admin check",
+    "description": "Dashboard layout with navigation — auth-protected with Auth0 superadmin role check (lib/admin-check.ts)",
     "steps": [
       "Create app/layout.tsx with Auth0 UserProvider",
       "Create app/dashboard/layout.tsx with sidebar navigation",
       "Navigation tabs: 'Existing Members' and 'Add New Member'",
-      "Show logged-in admin name and logout button",
+      "Show logged-in superadmin name and logout button",
       "Responsive layout with Tailwind CSS",
-      "Verify only authenticated org admins can access",
+      "Verify only authenticated users with Auth0 'superadmin' role can access; others redirect to /access-denied",
       "Test layout renders correctly"
     ],
     "passes": true,
@@ -410,13 +410,13 @@
   {
     "id": "F020",
     "category": "security",
-    "description": "All API routes validate Auth0 session and admin role before processing",
+    "description": "All API routes validate Auth0 session and superadmin role (via lib/admin-check.ts) before processing",
     "steps": [
-      "Every POST /api/provision/* route checks Auth0 session",
-      "Every GET /api/circle/* route checks Auth0 session",
+      "Every POST /api/provision/* route checks Auth0 session + superadmin role",
+      "Every GET /api/circle/* and /api/status route checks Auth0 session + superadmin role",
       "Unauthenticated requests return 401",
-      "Non-admin authenticated users return 403",
-      "Test with missing session, expired session, and non-admin user"
+      "Authenticated users without 'superadmin' Auth0 role return 403 with 'Forbidden: superadmin role required'",
+      "Test with missing session, expired session, and non-superadmin user"
     ],
     "passes": true,
     "priority": 20

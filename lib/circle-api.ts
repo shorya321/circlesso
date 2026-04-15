@@ -29,7 +29,7 @@ export async function listMembers(
 
   while (hasNextPage) {
     const response = await fetch(
-      `${BASE_URL}/community_members?community_id=${communityId}&per_page=100&page=${page}`,
+      `${BASE_URL}/community_members?community_id=${communityId}&per_page=100&page=${page}&status=all`,
       { method: "GET", headers: getHeaders() }
     );
 
@@ -51,6 +51,10 @@ export async function listMembers(
 
 /**
  * Create a new community member.
+ *
+ * Circle.so's POST /community_members response is wrapped as
+ * `{ message, community_member: {...} }` — unlike the flat records returned
+ * by GET /community_members. We unwrap so callers always get a CircleMember.
  */
 export async function createMember(
   communityId: string,
@@ -75,7 +79,13 @@ export async function createMember(
     );
   }
 
-  return response.json();
+  const data: { community_member?: CircleMember } = await response.json();
+  if (!data.community_member?.id) {
+    throw new Error(
+      "Circle.so createMember returned unexpected response shape (missing community_member.id)"
+    );
+  }
+  return data.community_member;
 }
 
 /**
@@ -85,7 +95,7 @@ export async function listAccessGroups(
   communityId: string
 ): Promise<CircleAccessGroup[]> {
   const response = await fetch(
-    `${BASE_URL}/access_groups?community_id=${communityId}`,
+    `${BASE_URL}/access_groups?community_id=${communityId}&per_page=100`,
     { method: "GET", headers: getHeaders() }
   );
 
@@ -96,7 +106,8 @@ export async function listAccessGroups(
     );
   }
 
-  return response.json();
+  const data: CirclePaginatedResponse<CircleAccessGroup> = await response.json();
+  return data.records;
 }
 
 /**
@@ -107,7 +118,7 @@ export async function addMemberToGroup(
   email: string
 ): Promise<void> {
   const response = await fetch(
-    `${BASE_URL}/access_groups/${groupId}/members`,
+    `${BASE_URL}/access_groups/${groupId}/community_members`,
     {
       method: "POST",
       headers: getHeaders(),
