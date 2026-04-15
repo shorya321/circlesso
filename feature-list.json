@@ -418,7 +418,7 @@
       "Non-admin authenticated users return 403",
       "Test with missing session, expired session, and non-admin user"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 20
   }
 ]
