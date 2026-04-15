@@ -237,7 +237,7 @@
       "Verify only authenticated org admins can access",
       "Test layout renders correctly"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 12
   },
   {

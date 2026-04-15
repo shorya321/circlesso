@@ -60,3 +60,14 @@
 - Status: 12/25 features complete (F001-F011B)
 - Total: 72 tests, all passing
 - Next: F012-F016 (UI components — dashboard layout, member table, new member form)
+
+## Session 4 — 2026-04-15 (UI Implementation Start)
+- Implemented F012 (Dashboard layout with navigation):
+  - Updated app/layout.tsx: Fira Sans/Code fonts, Toaster, metadata
+  - Created app/dashboard/layout.tsx: server-side Auth0 session check, redirects to /auth/login if unauthenticated
+  - Created components/dashboard/sidebar.tsx: client component with nav tabs (Existing Members, Add New Member), user info, logout link, mobile responsive (hamburger + backdrop)
+  - Created app/dashboard/page.tsx: placeholder "Existing Members" page
+  - 8 new tests (2 layout auth tests + 6 sidebar tests), all passing
+- Status: 13/25 features complete (F001-F012)
+- Total: 80 tests, all passing
+- Next: F012B (Toast notifications and loading states)
