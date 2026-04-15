@@ -342,7 +342,7 @@
       "Verify password-set link works and redirects to compass.helpucompli.com",
       "Verify member shows as 'Provisioned + Email Sent' in dashboard"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 17
   },
   {

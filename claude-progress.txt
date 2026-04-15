@@ -78,3 +78,18 @@
 - Status: 18/25 features complete (F001-F016)
 - Total: 111 tests, all passing
 - Next: F017-F020 (integration tests and security)
+
+## Session 5 — 2026-04-15 (Integration Tests)
+- Implemented F017 (E2E migrate one member):
+  - Created app/api/__integration__/migrate-one-member.test.ts
+  - Full flow test: list members (not_provisioned) → migrate → verify (email_sent)
+  - Tests Auth0 user creation with correct params (source, circle_member_id)
+  - Tests password ticket generation (7-day TTL, compass.helpucompli.com redirect)
+  - Tests welcome email sent with ticket URL
+  - Tests metadata update (email_sent=true)
+  - Tests duplicate detection (already-provisioned member skips creation)
+  - Tests status persistence across page refreshes (simulates multiple GET calls)
+  - 4 integration tests, all passing
+- Status: 19/25 features complete (F001-F017)
+- Total: 115 tests, all passing
+- Next: F018 (E2E add new member flow)
