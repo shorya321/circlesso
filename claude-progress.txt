@@ -115,4 +115,13 @@
   - 4 integration tests, all passing
 - Status: 21/25 features complete (F001-F019)
 - Total: 123 tests, all passing
-- Next: F019B (partial failure recovery)
+- Implemented F019B (partial failure recovery):
+  - Created app/api/__integration__/partial-failure-recovery.test.ts
+  - Scenario 1: Circle.so succeeds but Auth0 fails → error message → member in list → admin retries → success
+  - Scenario 2: Auth0 created but email fails → auth0_created status → retry flow → no duplicate user
+  - Tests email_sent metadata tracking (false on failure, no timestamp)
+  - Tests create endpoint email failure → auth0_created with retry guidance
+  - 4 integration tests, all passing
+- Status: 22/25 features complete (F001-F019B)
+- Total: 127 tests, all passing
+- Next: F019C (email status persistence)

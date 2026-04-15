@@ -390,7 +390,7 @@
       "Click 'Retry Email' — verify email sends and status updates to green",
       "Verify app_metadata.email_sent updates correctly after retry"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 19.5
   },
   {
