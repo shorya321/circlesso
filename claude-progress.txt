@@ -70,4 +70,11 @@
   - 8 new tests (2 layout auth tests + 6 sidebar tests), all passing
 - Status: 13/25 features complete (F001-F012)
 - Total: 80 tests, all passing
-- Next: F012B (Toast notifications and loading states)
+- Implemented F012B (Toast/loading): MemberTableSkeleton with staggered pulse, Sonner integrated in root layout
+- Implemented F013 (Existing Members table): MemberTable with StatusBadge (color-coded), per-row Migrate button, empty state
+- Implemented F014 (Migrate All): MigrateAllButton with sequential processing, 200ms delay, progress indicator, summary toast
+- Implemented F015 (Add New Member form): NewMemberForm with Zod validation, access group dropdown, new-member page
+- Implemented F016 (Retry Email): RetryEmailButton for auth0_created members, integrated into MemberTable
+- Status: 18/25 features complete (F001-F016)
+- Total: 111 tests, all passing
+- Next: F017-F020 (integration tests and security)
