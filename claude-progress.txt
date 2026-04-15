@@ -106,4 +106,13 @@
   - 4 integration tests, all passing
 - Status: 20/25 features complete (F001-F018)
 - Total: 119 tests, all passing
-- Next: F019 (duplicate detection)
+- Implemented F019 (duplicate detection):
+  - Created app/api/__integration__/duplicate-detection.test.ts
+  - Tests direct API call: existing user returns status without creating duplicate
+  - Tests UI button flow: list shows provisioned → migrate returns existing → list unchanged
+  - Tests auth0_created user (partial provision) not duplicated
+  - Tests idempotency: 3 repeated migrate calls, zero createUser calls
+  - 4 integration tests, all passing
+- Status: 21/25 features complete (F001-F019)
+- Total: 123 tests, all passing
+- Next: F019B (partial failure recovery)

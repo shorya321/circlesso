@@ -373,7 +373,7 @@
       "Verify status badge shows 'Already Provisioned'",
       "Test with both UI button click and direct API call"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 19
   },
   {
