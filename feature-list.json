@@ -290,7 +290,7 @@
       "Handle rate limit errors with retry logic",
       "Test bulk migration flow"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 14
   },
   {

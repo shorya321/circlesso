@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MemberTable } from "@/components/member-table";
 import { MemberTableSkeleton } from "@/components/member-table-skeleton";
+import { MigrateAllButton } from "@/components/migrate-all-button";
 import type { MemberWithStatus } from "@/types";
 
 export default function DashboardPage() {
@@ -44,7 +45,15 @@ export default function DashboardPage() {
         {loading ? (
           <MemberTableSkeleton />
         ) : (
-          <MemberTable members={members} onMemberUpdated={fetchMembers} />
+          <>
+            <div className="mb-4">
+              <MigrateAllButton
+                members={members}
+                onComplete={fetchMembers}
+              />
+            </div>
+            <MemberTable members={members} onMemberUpdated={fetchMembers} />
+          </>
         )}
       </div>
     </div>
