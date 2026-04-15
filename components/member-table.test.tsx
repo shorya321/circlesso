@@ -96,6 +96,13 @@ describe("MemberTable", () => {
     });
   });
 
+  it("renders Retry Email button for auth0_created members", () => {
+    const members = [makeMember(1, "a@test.com", "auth0_created")];
+    render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);
+
+    expect(screen.getByRole("button", { name: /retry email/i })).toBeTruthy();
+  });
+
   it("shows empty state when no members", () => {
     render(<MemberTable members={[]} onMemberUpdated={jest.fn()} />);
 

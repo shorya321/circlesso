@@ -324,7 +324,7 @@
       "Update status badge to 'Email Sent' (blue/green)",
       "Test retry flow"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 16
   },
   {

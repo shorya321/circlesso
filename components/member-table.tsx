@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
+import { RetryEmailButton } from "@/components/retry-email-button";
 import type { MemberWithStatus, ProvisionResult } from "@/types";
 
 interface MemberTableProps {
@@ -88,6 +89,7 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
         {members.map((member) => {
           const isLoading = loadingIds.has(member.circleMember.id);
           const showMigrate = member.auth0Status === "not_provisioned";
+          const showRetry = member.auth0Status === "auth0_created";
 
           return (
             <TableRow key={member.circleMember.id}>
@@ -115,6 +117,14 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
                     )}
                     Migrate
                   </Button>
+                )}
+                {showRetry && member.auth0UserId && (
+                  <RetryEmailButton
+                    email={member.circleMember.email}
+                    name={member.circleMember.name}
+                    auth0UserId={member.auth0UserId}
+                    onRetried={onMemberUpdated}
+                  />
                 )}
               </TableCell>
             </TableRow>
