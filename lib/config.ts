@@ -21,6 +21,7 @@ const envSchema = z.object({
   // Resend Email
   RESEND_API_KEY: z.string().startsWith("re_", "RESEND_API_KEY must start with 're_'"),
   EMAIL_FROM: z.string().email("EMAIL_FROM must be a valid email"),
+  EMAIL_REPLY_TO: z.string().email("EMAIL_REPLY_TO must be a valid email"),
 
   // Provisioning Config
   PASSWORD_TICKET_TTL: z.coerce.number().int().positive().default(604800),

@@ -17,6 +17,7 @@ export async function sendWelcomeEmail(
 
   const { data, error } = await resend.emails.send({
     from: config.EMAIL_FROM,
+    replyTo: config.EMAIL_REPLY_TO,
     to,
     subject: "Set up your HelpUcompli account",
     react: createElement(WelcomeEmail, {
