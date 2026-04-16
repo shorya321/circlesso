@@ -16,8 +16,8 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "CircleSo Admin",
-  description: "Admin dashboard for Circle.so member provisioning",
+  title: "Helpucompli Admin",
+  description: "Admin dashboard for Helpucompli member provisioning",
 };
 
 export default function RootLayout({

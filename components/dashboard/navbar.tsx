@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut, Shield, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 interface NavbarProps {
   userName: string | null;
@@ -55,10 +55,10 @@ export function Navbar({
               <Menu className="h-5 w-5" />
             )}
           </button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-3">
+            <img src="/logo_helpucompli.avif" alt="Helpucompli" className="h-12 w-12 object-contain" />
             <span className="text-base font-semibold text-foreground">
-              CircleSo Admin
+              Helpucompli Admin
             </span>
           </div>
         </div>
