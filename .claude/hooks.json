@@ -10,6 +10,16 @@
           }
         ],
         "description": "Block --no-verify flag on git commits"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -qE 'git\\s+add\\s+.*\\.env' && ! echo \"$TOOL_INPUT\" | grep -qE '\\.env\\.example'; then echo 'BLOCK: Do not stage .env files — secrets must not be committed' >&2; exit 1; fi; if echo \"$TOOL_INPUT\" | grep -qE 'git\\s+add\\s+.*\\.(pem|key)$|git\\s+add\\s+.*credentials'; then echo 'BLOCK: Do not stage secret files (credentials, .pem, .key)' >&2; exit 1; fi"
+          }
+        ],
+        "description": "Block staging of secret files"
       }
     ],
     "PostToolUse": [
@@ -18,11 +28,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(echo \"$TOOL_INPUT\" | grep -o '\"file_path\":\"[^\"]*\"' | head -1 | sed 's/\"file_path\":\"//' | sed 's/\"//'); if echo \"$FILE\" | grep -qE '\\.tsx?$'; then echo 'TypeScript file modified — consider running npm run build to check types'; fi",
-            "timeout": 5000
+            "command": "FILE=$(echo \"$TOOL_INPUT\" | grep -o '\"file_path\":\"[^\"]*\"' | head -1 | sed 's/\"file_path\":\"//' | sed 's/\"//'); if echo \"$FILE\" | grep -qE '\\.tsx?$'; then cd /Volumes/shorya/apps/circleso && ERRORS=$(npx tsc --noEmit 2>&1); if [ $? -ne 0 ]; then echo \"tsc errors:\"; echo \"$ERRORS\" | head -10; else echo \"tsc: ok\"; fi; fi; exit 0",
+            "timeout": 15000
           }
         ],
-        "description": "Reminder to type-check after editing TypeScript files"
+        "description": "Run tsc type-check after editing TypeScript files (non-blocking)"
       }
     ],
     "Stop": [

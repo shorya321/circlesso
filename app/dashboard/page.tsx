@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Users } from "lucide-react";
 import { MemberTable } from "@/components/member-table";
 import { MemberTableSkeleton } from "@/components/member-table-skeleton";
-import { MigrateAllButton } from "@/components/migrate-all-button";
+import { StatsCards } from "@/components/stats-cards";
+import { Button } from "@/components/ui/button";
 import type { MemberWithStatus } from "@/types";
 
 export default function DashboardPage() {
@@ -42,15 +44,19 @@ export default function DashboardPage() {
       </p>
 
       <div className="mt-6">
+        <StatsCards members={members} loading={loading} />
+
         {loading ? (
           <MemberTableSkeleton />
         ) : (
           <>
             <div className="mb-4">
-              <MigrateAllButton
-                members={members}
-                onComplete={fetchMembers}
-              />
+              <Button className="pointer-events-none bg-black text-white">
+                <Users className="mr-2 h-4 w-4" />
+                Migrate Unprovisioned (
+                {members.filter((m) => m.auth0Status === "not_provisioned").length}
+                )
+              </Button>
             </div>
             <MemberTable members={members} onMemberUpdated={fetchMembers} />
           </>
