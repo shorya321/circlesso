@@ -70,6 +70,7 @@ export type ProvisioningStatus =
   | "not_provisioned"
   | "auth0_created"
   | "email_sent"
+  | "password_changed"
   | "failed";
 
 export interface MemberWithStatus {

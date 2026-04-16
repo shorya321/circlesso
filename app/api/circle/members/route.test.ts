@@ -136,6 +136,23 @@ describe("GET /api/circle/members", () => {
     expect(data[0].auth0UserId).toBe("auth0|1");
   });
 
+  it("returns password_changed status when Auth0 user has email_sent=true and email_verified=true", async () => {
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
+    mockListMembers.mockResolvedValueOnce([makeMember(1, "a@test.com")]);
+    mockGetUserByEmail.mockResolvedValueOnce({
+      user_id: "auth0|1",
+      email: "a@test.com",
+      email_verified: true,
+      app_metadata: { email_sent: true },
+    });
+
+    const response = await GET();
+    const data = await response.json();
+
+    expect(data[0].auth0Status).toBe("password_changed");
+    expect(data[0].auth0UserId).toBe("auth0|1");
+  });
+
   it("returns auth0_created status when user exists but email not sent", async () => {
     mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     mockListMembers.mockResolvedValueOnce([makeMember(1, "a@test.com")]);

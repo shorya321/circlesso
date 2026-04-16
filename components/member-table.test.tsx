@@ -133,6 +133,22 @@ describe("MemberTable", () => {
       expect(screen.queryByRole("button", { name: /migrate/i })).toBeNull();
     });
 
+    it("renders em-dash placeholder for password_changed members", () => {
+      const members = [makeMember(1, "done@test.com", "password_changed")];
+      const { container } = render(
+        <MemberTable members={members} onMemberUpdated={jest.fn()} />
+      );
+
+      const actionCell = container.querySelectorAll("tbody td")[3];
+      expect(actionCell?.textContent).toContain("—");
+      expect(
+        screen.queryByRole("button", { name: /migrate/i })
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: /retry email/i })
+      ).toBeNull();
+    });
+
     it("renders Retry Check button for failed members", () => {
       const members = [makeMember(1, "oops@test.com", "failed")];
       render(<MemberTable members={members} onMemberUpdated={jest.fn()} />);

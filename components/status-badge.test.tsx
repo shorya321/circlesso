@@ -20,6 +20,11 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Email Sent")).toBeTruthy();
   });
 
+  it("renders 'Password Changed' for password_changed status", () => {
+    render(<StatusBadge status="password_changed" />);
+    expect(screen.getByText("Password Changed")).toBeTruthy();
+  });
+
   it("renders 'Failed' for failed status", () => {
     render(<StatusBadge status="failed" />);
     expect(screen.getByText("Failed")).toBeTruthy();
@@ -41,5 +46,11 @@ describe("StatusBadge", () => {
     const { container } = render(<StatusBadge status="email_sent" />);
     const badge = container.firstChild as HTMLElement;
     expect(badge.className).toContain("bg-green");
+  });
+
+  it("applies blue classes for password_changed", () => {
+    const { container } = render(<StatusBadge status="password_changed" />);
+    const badge = container.firstChild as HTMLElement;
+    expect(badge.className).toContain("bg-blue");
   });
 });

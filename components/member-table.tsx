@@ -117,6 +117,7 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
           <span className="text-sm text-muted-foreground">—</span>
         );
       case "email_sent":
+      case "password_changed":
         return <span className="text-sm text-muted-foreground">—</span>;
       case "failed":
         return (

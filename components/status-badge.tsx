@@ -21,6 +21,10 @@ const statusConfig: Record<
     label: "Email Sent",
     className: "bg-green-100 text-green-700 border-green-200",
   },
+  password_changed: {
+    label: "Password Changed",
+    className: "bg-blue-100 text-blue-700 border-blue-200",
+  },
   failed: {
     label: "Failed",
     className: "bg-red-100 text-red-700 border-red-200",
