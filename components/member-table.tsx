@@ -118,7 +118,16 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
         );
       case "email_sent":
       case "password_changed":
-        return <span className="text-sm text-muted-foreground">—</span>;
+        return member.auth0UserId ? (
+          <RetryEmailButton
+            email={member.circleMember.email}
+            name={member.circleMember.name}
+            auth0UserId={member.auth0UserId}
+            onRetried={onMemberUpdated}
+          />
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        );
       case "failed":
         return (
           <Button
