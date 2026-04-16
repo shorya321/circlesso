@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN npx next build --no-turbopack
 
 # Stage 3: Production runner
 FROM node:20-alpine AS runner
