@@ -16,7 +16,7 @@ export async function sendWelcomeEmail(
   const resend = new Resend(config.RESEND_API_KEY);
 
   const { data, error } = await resend.emails.send({
-    from: config.EMAIL_FROM,
+    from: `HelpUcompli <${config.EMAIL_FROM}>`,
     replyTo: config.EMAIL_REPLY_TO,
     to,
     subject: "Set up your HelpUcompli account",
