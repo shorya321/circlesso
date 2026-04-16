@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth0 } from "@/lib/auth0";
 import { checkAdminAccess } from "@/lib/admin-check";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -23,11 +23,8 @@ export default async function DashboardLayout({
   const userEmail = (session?.user.email as string) ?? null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar userName={userName} userEmail={userEmail} />
-      <main className="flex-1 overflow-auto p-6 md:p-8">
-        {children}
-      </main>
-    </div>
+    <DashboardShell userName={userName} userEmail={userEmail}>
+      {children}
+    </DashboardShell>
   );
 }
