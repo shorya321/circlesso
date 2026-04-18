@@ -58,7 +58,7 @@ export function Navbar({
           <div className="flex items-center gap-3">
             <img src="/logo_helpucompli.avif" alt="Helpucompli" className="h-12 w-12 object-contain" />
             <span className="text-base font-semibold text-foreground">
-              Helpucompli Admin
+              Compass Admin
             </span>
           </div>
         </div>
