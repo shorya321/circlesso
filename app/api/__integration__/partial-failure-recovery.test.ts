@@ -140,7 +140,7 @@ describe("F019B: Partial failure recovery", () => {
           firstName: "Frank",
           lastName: "Green",
           email: "frank@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       const createData = await createResponse.json();
@@ -354,7 +354,7 @@ describe("F019B: Partial failure recovery", () => {
           firstName: "Iris",
           lastName: "Jones",
           email: "iris@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       const data = await response.json();

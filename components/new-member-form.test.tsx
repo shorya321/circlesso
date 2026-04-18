@@ -24,7 +24,9 @@ describe("NewMemberForm", () => {
     expect(screen.getByLabelText(/first name/i)).toBeTruthy();
     expect(screen.getByLabelText(/last name/i)).toBeTruthy();
     expect(screen.getByLabelText(/email/i)).toBeTruthy();
-    expect(screen.getByLabelText(/access group/i)).toBeTruthy();
+    expect(screen.getByRole("group", { name: /access groups/i })).toBeTruthy();
+    expect(screen.getByLabelText(/group a/i)).toBeTruthy();
+    expect(screen.getByLabelText(/group b/i)).toBeTruthy();
   });
 
   it("renders submit button", () => {
@@ -54,7 +56,7 @@ describe("NewMemberForm", () => {
     });
   });
 
-  it("calls create API on valid submission", async () => {
+  it("calls create API on valid submission with selected access group ids", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ success: true, status: "email_sent", emailSent: true }),
@@ -65,7 +67,8 @@ describe("NewMemberForm", () => {
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "John" } });
     fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "john@test.com" } });
-    fireEvent.change(screen.getByLabelText(/access group/i), { target: { value: "1" } });
+    fireEvent.click(screen.getByLabelText(/group a/i));
+    fireEvent.click(screen.getByLabelText(/group b/i));
 
     fireEvent.click(screen.getByRole("button", { name: /create member/i }));
 
@@ -74,5 +77,47 @@ describe("NewMemberForm", () => {
         method: "POST",
       }));
     });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.accessGroupIds).toEqual([1, 2]);
+  });
+
+  it("shows validation error when no access group is selected", async () => {
+    render(<NewMemberForm accessGroups={mockGroups} />);
+
+    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "John" } });
+    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "john@test.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /create member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/select at least one access group/i)).toBeTruthy();
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("toggles access group selection off when clicked twice", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, status: "email_sent", emailSent: true }),
+    });
+
+    render(<NewMemberForm accessGroups={mockGroups} />);
+
+    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "John" } });
+    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "john@test.com" } });
+    fireEvent.click(screen.getByLabelText(/group a/i));
+    fireEvent.click(screen.getByLabelText(/group b/i));
+    fireEvent.click(screen.getByLabelText(/group a/i));
+
+    fireEvent.click(screen.getByRole("button", { name: /create member/i }));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled();
+    });
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.accessGroupIds).toEqual([2]);
   });
 });

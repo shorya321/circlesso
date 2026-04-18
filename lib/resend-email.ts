@@ -16,10 +16,10 @@ export async function sendWelcomeEmail(
   const resend = new Resend(config.RESEND_API_KEY);
 
   const { data, error } = await resend.emails.send({
-    from: `HelpUcompli <${config.EMAIL_FROM}>`,
+    from: `Compass <${config.EMAIL_FROM}>`,
     replyTo: config.EMAIL_REPLY_TO,
     to,
-    subject: "Set up your HelpUcompli account",
+    subject: "Set up your Compass account",
     react: createElement(WelcomeEmail, {
       name,
       passwordTicketUrl,

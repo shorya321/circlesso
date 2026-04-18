@@ -36,9 +36,9 @@ describe("sendWelcomeEmail", () => {
     expect(result).toEqual({ id: "email-id-123" });
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "noreply@helpucompli.com",
+        from: "Compass <noreply@helpucompli.com>",
         to: "user@example.com",
-        subject: "Set up your HelpUcompli account",
+        subject: "Set up your Compass account",
       })
     );
   });

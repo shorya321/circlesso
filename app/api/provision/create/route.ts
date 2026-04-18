@@ -16,7 +16,7 @@ const createMemberSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
-  accessGroupId: z.number().int().positive(),
+  accessGroupIds: z.array(z.number().int().positive()).min(1),
 });
 
 // POST /api/provision/create — create new member in Circle.so + Auth0
@@ -53,22 +53,26 @@ export async function POST(request: NextRequest) {
       fullName
     );
 
-    // Step 2: Add to access group — non-fatal. Per design spec, a failure here
+    // Step 2: Add to access groups — non-fatal. Per design spec, a failure here
     // is a warning; Auth0 provisioning still continues so the user gets an account.
-    let accessGroupAssigned = true;
-    let accessGroupWarning: string | undefined;
-    try {
-      await addMemberToGroup(body.accessGroupId, body.email);
-    } catch (error: unknown) {
-      accessGroupAssigned = false;
-      accessGroupWarning =
-        "Member created but NOT added to the access group. Assign manually in Circle dashboard.";
-      console.error("addMemberToGroup failed", {
-        email: body.email,
-        accessGroupId: body.accessGroupId,
-        error: error instanceof Error ? error.message : error,
-      });
+    // Circle.so API has no bulk endpoint — loop sequentially to stay inside rate limits.
+    const failedGroupIds: number[] = [];
+    for (const groupId of body.accessGroupIds) {
+      try {
+        await addMemberToGroup(groupId, body.email);
+      } catch (error: unknown) {
+        failedGroupIds.push(groupId);
+        console.error("addMemberToGroup failed", {
+          email: body.email,
+          accessGroupId: groupId,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
     }
+    const accessGroupAssigned = failedGroupIds.length === 0;
+    const accessGroupWarning = accessGroupAssigned
+      ? undefined
+      : `Member created but NOT added to ${failedGroupIds.length} access group(s) (IDs: ${failedGroupIds.join(", ")}). Assign manually in Circle dashboard.`;
 
     // Step 3: Create Auth0 user
     let auth0User;

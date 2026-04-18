@@ -149,7 +149,7 @@ describe("F020: API route session + admin role validation", () => {
           firstName: "Test",
           lastName: "User",
           email: "test@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       expect(response.status).toBe(401);
@@ -212,7 +212,7 @@ describe("F020: API route session + admin role validation", () => {
           firstName: "Test",
           lastName: "User",
           email: "test@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       expect(response.status).toBe(403);
@@ -259,7 +259,7 @@ describe("F020: API route session + admin role validation", () => {
           firstName: "Test",
           lastName: "User",
           email: "test@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       await retryEmail(
@@ -299,7 +299,7 @@ describe("F020: API route session + admin role validation", () => {
           firstName: "Test",
           lastName: "User",
           email: "test@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       await retryEmail(
@@ -382,7 +382,7 @@ describe("F020: API route session + admin role validation", () => {
           firstName: "Test",
           lastName: "User",
           email: "test@example.com",
-          accessGroupId: 10,
+          accessGroupIds: [10],
         })
       );
       expect(response.status).toBe(200);

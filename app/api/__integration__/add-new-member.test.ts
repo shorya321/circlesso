@@ -147,7 +147,7 @@ describe("F018: End-to-end add one new member", () => {
         firstName: "Alice",
         lastName: "Johnson",
         email: "alice@newcorp.com",
-        accessGroupId: 10,
+        accessGroupIds: [10],
       })
     );
     const createData = await createResponse.json();
@@ -260,7 +260,7 @@ describe("F018: End-to-end add one new member", () => {
         firstName: "Bob",
         lastName: "Williams",
         email: "bob@newcorp.com",
-        accessGroupId: 999,
+        accessGroupIds: [999],
       })
     );
     const data = await response.json();
@@ -287,6 +287,106 @@ describe("F018: End-to-end add one new member", () => {
     expect(mockSendWelcomeEmail).toHaveBeenCalled();
   });
 
+  it("assigns multiple access groups and reports partial failures", async () => {
+    authenticateSession();
+    mockCreateMember.mockResolvedValueOnce({
+      id: 505,
+      email: "erin@newcorp.com",
+      name: "Erin Frost",
+      community_id: 12345,
+    });
+    // 3 groups: first + third succeed, middle fails
+    mockAddMemberToGroup
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("Access group 20 not found"))
+      .mockResolvedValueOnce(undefined);
+    mockCreateUser.mockResolvedValueOnce({
+      user_id: "auth0|erin-505",
+      email: "erin@newcorp.com",
+      name: "Erin Frost",
+    });
+    mockCreatePasswordTicket.mockResolvedValueOnce({
+      ticket: "https://helpucompli.us.auth0.com/lo/reset?ticket=erin",
+    });
+    mockSendWelcomeEmail.mockResolvedValueOnce({ id: "email-erin-005" });
+    mockUpdateUserMetadata.mockResolvedValueOnce(undefined);
+
+    const response = await createMember(
+      makePostRequest({
+        firstName: "Erin",
+        lastName: "Frost",
+        email: "erin@newcorp.com",
+        accessGroupIds: [10, 20, 30],
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.accessGroupAssigned).toBe(false);
+    expect(data.warning).toContain("20");
+    expect(mockAddMemberToGroup).toHaveBeenCalledTimes(3);
+    expect(mockAddMemberToGroup).toHaveBeenNthCalledWith(1, 10, "erin@newcorp.com");
+    expect(mockAddMemberToGroup).toHaveBeenNthCalledWith(2, 20, "erin@newcorp.com");
+    expect(mockAddMemberToGroup).toHaveBeenNthCalledWith(3, 30, "erin@newcorp.com");
+    expect(data.emailSent).toBe(true);
+  });
+
+  it("assigns to all selected groups when all succeed", async () => {
+    authenticateSession();
+    mockCreateMember.mockResolvedValueOnce({
+      id: 506,
+      email: "frank@newcorp.com",
+      name: "Frank Grove",
+      community_id: 12345,
+    });
+    mockAddMemberToGroup
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined);
+    mockCreateUser.mockResolvedValueOnce({
+      user_id: "auth0|frank-506",
+      email: "frank@newcorp.com",
+      name: "Frank Grove",
+    });
+    mockCreatePasswordTicket.mockResolvedValueOnce({
+      ticket: "https://helpucompli.us.auth0.com/lo/reset?ticket=frank",
+    });
+    mockSendWelcomeEmail.mockResolvedValueOnce({ id: "email-frank-006" });
+    mockUpdateUserMetadata.mockResolvedValueOnce(undefined);
+
+    const response = await createMember(
+      makePostRequest({
+        firstName: "Frank",
+        lastName: "Grove",
+        email: "frank@newcorp.com",
+        accessGroupIds: [10, 20],
+      })
+    );
+    const data = await response.json();
+
+    expect(data.accessGroupAssigned).toBe(true);
+    expect(data.warning).toBeUndefined();
+    expect(mockAddMemberToGroup).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects create request with empty accessGroupIds array", async () => {
+    authenticateSession();
+
+    const response = await createMember(
+      makePostRequest({
+        firstName: "Gina",
+        lastName: "Hall",
+        email: "gina@newcorp.com",
+        accessGroupIds: [],
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Invalid request body");
+    expect(mockCreateMember).not.toHaveBeenCalled();
+  });
+
   it("handles Auth0 creation failure after Circle.so success", async () => {
     authenticateSession();
     mockCreateMember.mockResolvedValueOnce({
@@ -303,7 +403,7 @@ describe("F018: End-to-end add one new member", () => {
         firstName: "Carol",
         lastName: "Davis",
         email: "carol@newcorp.com",
-        accessGroupId: 10,
+        accessGroupIds: [10],
       })
     );
     const data = await response.json();
@@ -337,7 +437,7 @@ describe("F018: End-to-end add one new member", () => {
         firstName: "Dave",
         lastName: "Evans",
         email: "dave@newcorp.com",
-        accessGroupId: 10,
+        accessGroupIds: [10],
       })
     );
     const data = await response.json();

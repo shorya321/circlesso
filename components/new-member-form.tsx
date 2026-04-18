@@ -18,7 +18,9 @@ const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Please enter a valid email address"),
-  accessGroupId: z.number().int().positive("Please select an access group"),
+  accessGroupIds: z
+    .array(z.number().int().positive())
+    .min(1, "Select at least one access group"),
 });
 
 type FormErrors = Partial<Record<keyof z.infer<typeof formSchema>, string>>;
@@ -27,7 +29,7 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [accessGroupId, setAccessGroupId] = useState<number>(0);
+  const [accessGroupIds, setAccessGroupIds] = useState<number[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,7 +37,7 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
     setFirstName("");
     setLastName("");
     setEmail("");
-    setAccessGroupId(0);
+    setAccessGroupIds([]);
     setErrors({});
   };
 
@@ -47,7 +49,7 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
       firstName,
       lastName,
       email,
-      accessGroupId,
+      accessGroupIds,
     });
 
     if (!parsed.success) {
@@ -151,23 +153,45 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="accessGroup">Access Group</Label>
-            <select
-              id="accessGroup"
-              value={accessGroupId}
-              onChange={(e) => setAccessGroupId(Number(e.target.value))}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <Label>Access Groups</Label>
+            <div
+              role="group"
+              aria-label="Access Groups"
+              className="max-h-48 overflow-y-auto rounded-md border border-input p-3 space-y-2"
             >
-              <option value={0}>Select an access group...</option>
-              {accessGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-            {errors.accessGroupId && (
+              {accessGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No access groups available.
+                </p>
+              ) : (
+                accessGroups.map((group) => {
+                  const checked = accessGroupIds.includes(group.id);
+                  return (
+                    <label
+                      key={group.id}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          setAccessGroupIds((prev) =>
+                            prev.includes(group.id)
+                              ? prev.filter((id) => id !== group.id)
+                              : [...prev, group.id]
+                          )
+                        }
+                        className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                      />
+                      <span>{group.name}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            {errors.accessGroupIds && (
               <p className="text-sm text-destructive">
-                {errors.accessGroupId}
+                {errors.accessGroupIds}
               </p>
             )}
           </div>

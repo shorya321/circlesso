@@ -42,13 +42,13 @@ export default function WelcomeEmail({
             }}
           >
             <Text style={{ fontSize: "24px", fontWeight: "bold", color: "#111827" }}>
-              Welcome to HelpUcompli
+              Welcome to Compass
             </Text>
             <Text style={{ fontSize: "16px", color: "#374151", lineHeight: "1.6" }}>
               Hi {name},
             </Text>
             <Text style={{ fontSize: "16px", color: "#374151", lineHeight: "1.6" }}>
-              Your HelpUcompli account is ready! Click the button below to set
+              Your Compass account is ready! Click the button below to set
               your password and get started.
             </Text>
             <Section style={{ textAlign: "center", margin: "32px 0" }}>
@@ -73,7 +73,7 @@ export default function WelcomeEmail({
             </Text>
             <Hr style={{ borderColor: "#e5e7eb", margin: "24px 0" }} />
             <Text style={{ fontSize: "12px", color: "#9ca3af" }}>
-              &mdash; The HelpUcompli Team
+              &mdash; The Compass Team
             </Text>
           </Section>
         </Container>

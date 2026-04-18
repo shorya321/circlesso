@@ -90,7 +90,7 @@ export interface CreateMemberPayload {
   firstName: string;
   lastName: string;
   email: string;
-  accessGroupId: number;
+  accessGroupIds: number[];
 }
 
 export interface ProvisionResult {
