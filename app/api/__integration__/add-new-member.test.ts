@@ -387,6 +387,101 @@ describe("F018: End-to-end add one new member", () => {
     expect(mockCreateMember).not.toHaveBeenCalled();
   });
 
+  it("reuses existing Auth0 user on 409 and still sends welcome email", async () => {
+    authenticateSession();
+    mockCreateMember.mockResolvedValueOnce({
+      id: 700,
+      email: "ivy@newcorp.com",
+      name: "Ivy Gray",
+      community_id: 12345,
+    });
+    mockAddMemberToGroup.mockResolvedValueOnce(undefined);
+    mockCreateUser.mockRejectedValueOnce(new Error("User already exists"));
+    mockGetUserByEmail.mockResolvedValueOnce({
+      user_id: "auth0|ivy-pre-existing",
+      email: "ivy@newcorp.com",
+      name: "Ivy Gray",
+      email_verified: true,
+      created_at: "2025-12-01T00:00:00.000Z",
+      app_metadata: {},
+    });
+    // First updateUserMetadata = link existing Auth0 user to new Circle member
+    mockUpdateUserMetadata.mockResolvedValueOnce(undefined);
+    mockCreatePasswordTicket.mockResolvedValueOnce({
+      ticket: "https://helpucompli.us.auth0.com/lo/reset?ticket=ivy",
+    });
+    mockSendWelcomeEmail.mockResolvedValueOnce({ id: "email-ivy-007" });
+    // Second updateUserMetadata = email_sent=true on success path
+    mockUpdateUserMetadata.mockResolvedValueOnce(undefined);
+
+    const response = await createMember(
+      makePostRequest({
+        firstName: "Ivy",
+        lastName: "Gray",
+        email: "ivy@newcorp.com",
+        accessGroupIds: [10],
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.status).toBe("email_sent");
+    expect(data.auth0UserId).toBe("auth0|ivy-pre-existing");
+    expect(data.emailSent).toBe(true);
+    expect(data.warning).toMatch(/auth0 account already existed/i);
+
+    // Ticket + email were generated for the existing Auth0 user_id
+    expect(mockCreatePasswordTicket).toHaveBeenCalledWith(
+      "auth0|ivy-pre-existing",
+      expect.any(String),
+      expect.any(Number)
+    );
+    expect(mockSendWelcomeEmail).toHaveBeenCalledWith(
+      "ivy@newcorp.com",
+      "Ivy Gray",
+      "https://helpucompli.us.auth0.com/lo/reset?ticket=ivy"
+    );
+    // Linked existing Auth0 user to the new Circle member id
+    expect(mockUpdateUserMetadata).toHaveBeenNthCalledWith(
+      1,
+      "auth0|ivy-pre-existing",
+      expect.objectContaining({
+        source: "admin_provisioning",
+        circle_member_id: "700",
+      })
+    );
+  });
+
+  it("returns 500 when Auth0 reports 409 but getUserByEmail returns null", async () => {
+    authenticateSession();
+    mockCreateMember.mockResolvedValueOnce({
+      id: 710,
+      email: "jack@newcorp.com",
+      name: "Jack Hill",
+      community_id: 12345,
+    });
+    mockAddMemberToGroup.mockResolvedValueOnce(undefined);
+    mockCreateUser.mockRejectedValueOnce(new Error("User already exists"));
+    mockGetUserByEmail.mockResolvedValueOnce(null);
+
+    const response = await createMember(
+      makePostRequest({
+        firstName: "Jack",
+        lastName: "Hill",
+        email: "jack@newcorp.com",
+        accessGroupIds: [10],
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.success).toBe(false);
+    expect(data.error).toMatch(/lookup returned no user/i);
+    expect(mockCreatePasswordTicket).not.toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
   it("handles Auth0 creation failure after Circle.so success", async () => {
     authenticateSession();
     mockCreateMember.mockResolvedValueOnce({

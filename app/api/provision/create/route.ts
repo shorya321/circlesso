@@ -8,6 +8,7 @@ import {
   createUser,
   createPasswordTicket,
   updateUserMetadata,
+  getUserByEmail,
 } from "@/lib/auth0-management";
 import { sendWelcomeEmail } from "@/lib/resend-email";
 import type { ProvisionResult } from "@/types";
@@ -74,8 +75,12 @@ export async function POST(request: NextRequest) {
       ? undefined
       : `Member created but NOT added to ${failedGroupIds.length} access group(s) (IDs: ${failedGroupIds.join(", ")}). Assign manually in Circle dashboard.`;
 
-    // Step 3: Create Auth0 user
+    // Step 3: Create Auth0 user — or reuse existing one on 409.
+    // Scenario: Auth0 account existed before this admin-driven Circle.so
+    // creation (e.g. user was invited elsewhere). We still want the welcome
+    // email + password-change ticket to go out to that existing account.
     let auth0User;
+    let auth0AlreadyExisted = false;
     try {
       auth0User = await createUser(body.email, fullName, {
         source: "admin_provisioning",
@@ -84,16 +89,77 @@ export async function POST(request: NextRequest) {
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Auth0 creation failed";
-      return NextResponse.json<ProvisionResult>(
-        {
-          success: false,
-          status: "failed",
-          accessGroupAssigned,
-          error: `Created in Circle.so but Auth0 failed: ${message}`,
-        },
-        { status: 500 }
-      );
+      const isAlreadyExists = message === "User already exists";
+
+      if (isAlreadyExists) {
+        try {
+          const existing = await getUserByEmail(body.email);
+          if (!existing) {
+            // Conflict from Auth0 but lookup returned nothing — treat as error.
+            return NextResponse.json<ProvisionResult>(
+              {
+                success: false,
+                status: "failed",
+                accessGroupAssigned,
+                error:
+                  "Auth0 reported user already exists but lookup returned no user. Try again or check Auth0 dashboard.",
+              },
+              { status: 500 }
+            );
+          }
+          auth0User = existing;
+          auth0AlreadyExisted = true;
+          // Best-effort: link existing Auth0 user to the newly created
+          // Circle member via app_metadata. Non-fatal on failure.
+          try {
+            await updateUserMetadata(existing.user_id, {
+              source: "admin_provisioning",
+              circle_member_id: String(circleMember.id),
+            });
+          } catch (metaError: unknown) {
+            console.error("updateUserMetadata (link existing) failed", {
+              email: body.email,
+              auth0UserId: existing.user_id,
+              error:
+                metaError instanceof Error
+                  ? metaError.message
+                  : metaError,
+            });
+          }
+        } catch (lookupError: unknown) {
+          const lookupMessage =
+            lookupError instanceof Error
+              ? lookupError.message
+              : "Auth0 lookup failed";
+          return NextResponse.json<ProvisionResult>(
+            {
+              success: false,
+              status: "failed",
+              accessGroupAssigned,
+              error: `Created in Circle.so but Auth0 lookup failed: ${lookupMessage}`,
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json<ProvisionResult>(
+          {
+            success: false,
+            status: "failed",
+            accessGroupAssigned,
+            error: `Created in Circle.so but Auth0 failed: ${message}`,
+          },
+          { status: 500 }
+        );
+      }
     }
+
+    const auth0ExistedWarning = auth0AlreadyExisted
+      ? "Auth0 account already existed for this email — sent password-reset/welcome email to the existing account."
+      : undefined;
+    const combinedWarning = [accessGroupWarning, auth0ExistedWarning]
+      .filter(Boolean)
+      .join(" ");
 
     // Step 4: Generate password-change ticket
     const ticket = await createPasswordTicket(
@@ -117,7 +183,7 @@ export async function POST(request: NextRequest) {
         auth0UserId: auth0User.user_id,
         emailSent: true,
         accessGroupAssigned,
-        warning: accessGroupWarning,
+        warning: combinedWarning || undefined,
       });
     } catch (error: unknown) {
       const emailErrorMessage =
@@ -142,7 +208,7 @@ export async function POST(request: NextRequest) {
         auth0UserId: auth0User.user_id,
         emailSent: false,
         accessGroupAssigned,
-        warning: accessGroupWarning,
+        warning: combinedWarning || undefined,
         error: `Welcome email failed: ${emailErrorMessage}. Use Retry Email.`,
       });
     }

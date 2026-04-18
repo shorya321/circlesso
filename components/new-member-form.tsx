@@ -88,6 +88,8 @@ export function NewMemberForm({ accessGroups }: NewMemberFormProps) {
           result.error ??
             "Member created but welcome email failed. Use Retry Email from the Existing Members tab."
         );
+      } else if (result.warning) {
+        toast.warning(result.warning);
       } else {
         toast.success("Member created and welcome email sent");
       }
