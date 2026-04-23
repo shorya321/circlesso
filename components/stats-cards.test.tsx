@@ -28,6 +28,7 @@ function makeMember(
     },
     auth0Status,
     auth0UserId: auth0Status === "not_provisioned" ? null : "auth0|123",
+    lastLogin: null,
     errorMessage: auth0Status === "failed" ? "Lookup failed" : null,
   };
 }

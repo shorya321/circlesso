@@ -44,6 +44,7 @@ export interface Auth0User {
   name: string;
   email_verified: boolean;
   created_at: string;
+  last_login: string | null;
   app_metadata: Auth0AppMetadata;
 }
 
@@ -77,6 +78,7 @@ export interface MemberWithStatus {
   circleMember: CircleMember;
   auth0Status: ProvisioningStatus;
   auth0UserId: string | null;
+  lastLogin: string | null;
   errorMessage: string | null;
 }
 

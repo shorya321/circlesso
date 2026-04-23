@@ -32,6 +32,7 @@ export async function GET() {
               circleMember: member,
               auth0Status: "not_provisioned" as ProvisioningStatus,
               auth0UserId: null,
+              lastLogin: null,
               errorMessage: null,
             };
           }
@@ -45,6 +46,7 @@ export async function GET() {
             circleMember: member,
             auth0Status: status,
             auth0UserId: auth0User.user_id,
+            lastLogin: auth0User.last_login ?? null,
             errorMessage: null,
           };
         } catch {
@@ -52,6 +54,7 @@ export async function GET() {
             circleMember: member,
             auth0Status: "failed" as ProvisioningStatus,
             auth0UserId: null,
+            lastLogin: null,
             errorMessage: "Failed to check Auth0 status",
           };
         }

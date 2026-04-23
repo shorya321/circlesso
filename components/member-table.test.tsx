@@ -38,6 +38,7 @@ const makeMember = (
   },
   auth0Status: status,
   auth0UserId: status !== "not_provisioned" ? `auth0|${id}` : null,
+  lastLogin: null,
   errorMessage: null,
 });
 
@@ -116,7 +117,7 @@ describe("MemberTable", () => {
         <MemberTable members={members} onMemberUpdated={jest.fn()} />
       );
 
-      const actionCell = container.querySelectorAll("tbody td")[3];
+      const actionCell = container.querySelectorAll("tbody td")[4];
       expect(actionCell?.textContent).toContain("—");
       expect(
         screen.queryByRole("button", { name: /migrate/i })
@@ -139,7 +140,7 @@ describe("MemberTable", () => {
         <MemberTable members={members} onMemberUpdated={jest.fn()} />
       );
 
-      const actionCell = container.querySelectorAll("tbody td")[3];
+      const actionCell = container.querySelectorAll("tbody td")[4];
       expect(actionCell?.textContent).toContain("—");
       expect(
         screen.queryByRole("button", { name: /migrate/i })

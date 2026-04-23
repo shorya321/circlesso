@@ -37,6 +37,7 @@ const makeMember = (
   },
   auth0Status: status,
   auth0UserId: status !== "not_provisioned" ? `auth0|${id}` : null,
+  lastLogin: null,
   errorMessage: null,
 });
 

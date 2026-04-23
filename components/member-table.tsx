@@ -24,6 +24,24 @@ import type { MemberWithStatus, ProvisionResult } from "@/types";
 
 const PAGE_SIZE = 10;
 
+function formatLastLogin(iso: string | null): string {
+  if (!iso) return "Never";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "Never";
+  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  const diffMon = Math.floor(diffDay / 30);
+  if (diffMon < 12) return `${diffMon} month${diffMon === 1 ? "" : "s"} ago`;
+  const diffYr = Math.floor(diffMon / 12);
+  return `${diffYr} year${diffYr === 1 ? "" : "s"} ago`;
+}
+
 interface MemberTableProps {
   members: MemberWithStatus[];
   onMemberUpdated: () => void;
@@ -160,6 +178,7 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Last Login</TableHead>
           <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -177,6 +196,9 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
               </TableCell>
               <TableCell>
                 <StatusBadge status={member.auth0Status} />
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {formatLastLogin(member.lastLogin)}
               </TableCell>
               <TableCell className="text-right">
                 {renderAction(member, isLoading)}
