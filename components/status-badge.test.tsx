@@ -30,6 +30,17 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Failed")).toBeTruthy();
   });
 
+  it("renders 'Blocked' for blocked status", () => {
+    render(<StatusBadge status="blocked" />);
+    expect(screen.getByText("Blocked")).toBeTruthy();
+  });
+
+  it("applies gray classes for blocked", () => {
+    const { container } = render(<StatusBadge status="blocked" />);
+    const badge = container.firstChild as HTMLElement;
+    expect(badge.className).toContain("bg-gray");
+  });
+
   it("applies red classes for not_provisioned", () => {
     const { container } = render(<StatusBadge status="not_provisioned" />);
     const badge = container.firstChild as HTMLElement;

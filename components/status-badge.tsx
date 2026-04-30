@@ -25,6 +25,10 @@ const statusConfig: Record<
     label: "Password Changed",
     className: "bg-blue-100 text-blue-700 border-blue-200",
   },
+  blocked: {
+    label: "Blocked",
+    className: "bg-gray-100 text-gray-700 border-gray-200",
+  },
   failed: {
     label: "Failed",
     className: "bg-red-100 text-red-700 border-red-200",

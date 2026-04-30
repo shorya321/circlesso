@@ -45,6 +45,7 @@ export interface Auth0User {
   email_verified: boolean;
   created_at: string;
   last_login: string | null;
+  blocked?: boolean;
   app_metadata: Auth0AppMetadata;
 }
 
@@ -72,6 +73,7 @@ export type ProvisioningStatus =
   | "auth0_created"
   | "email_sent"
   | "password_changed"
+  | "blocked"
   | "failed";
 
 export interface MemberWithStatus {

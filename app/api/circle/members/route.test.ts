@@ -153,6 +153,24 @@ describe("GET /api/circle/members", () => {
     expect(data[0].auth0UserId).toBe("auth0|1");
   });
 
+  it("returns blocked status when Auth0 user has blocked=true (overrides email_sent and password_changed)", async () => {
+    mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
+    mockListMembers.mockResolvedValueOnce([makeMember(1, "a@test.com")]);
+    mockGetUserByEmail.mockResolvedValueOnce({
+      user_id: "auth0|1",
+      email: "a@test.com",
+      email_verified: true,
+      blocked: true,
+      app_metadata: { email_sent: true },
+    });
+
+    const response = await GET();
+    const data = await response.json();
+
+    expect(data[0].auth0Status).toBe("blocked");
+    expect(data[0].auth0UserId).toBe("auth0|1");
+  });
+
   it("returns auth0_created status when user exists but email not sent", async () => {
     mockCheckAdminAccess.mockResolvedValueOnce(ADMIN_ACCESS);
     mockListMembers.mockResolvedValueOnce([makeMember(1, "a@test.com")]);

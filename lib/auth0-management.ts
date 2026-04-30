@@ -257,6 +257,58 @@ export async function updateUserMetadata(
 }
 
 /**
+ * Block an Auth0 user (sets `blocked: true`).
+ * The user can no longer log in until unblocked.
+ */
+export async function blockUser(userId: string): Promise<void> {
+  await setUserBlocked(userId, true);
+}
+
+/**
+ * Unblock an Auth0 user (sets `blocked: false`).
+ */
+export async function unblockUser(userId: string): Promise<void> {
+  await setUserBlocked(userId, false);
+}
+
+async function setUserBlocked(
+  userId: string,
+  blocked: boolean
+): Promise<void> {
+  const config = getConfig();
+  const token = await getManagementToken();
+  const action = blocked ? "blockUser" : "unblockUser";
+
+  const response = await fetch(
+    `https://${config.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ blocked }),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after")
+      );
+      throw new Auth0RateLimitError(
+        retryAfterMs,
+        `Auth0 ${action} rate-limited (429); retry after ${retryAfterMs}ms`
+      );
+    }
+    const error = await response.json().catch(() => ({}));
+    throw new Error(
+      `Auth0 ${action} failed: ${error.message || response.status}`
+    );
+  }
+}
+
+/**
  * Fetch the roles assigned to an Auth0 user.
  * Requires the M2M app to have read:roles and read:role_members scopes.
  */

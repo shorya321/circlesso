@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,8 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { RetryEmailButton } from "@/components/retry-email-button";
-import type { MemberWithStatus, ProvisionResult } from "@/types";
+import { MemberActionsMenu } from "@/components/member-actions-menu";
+import type { MemberWithStatus } from "@/types";
 
 const PAGE_SIZE = 10;
 
@@ -48,12 +41,13 @@ interface MemberTableProps {
 }
 
 export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
-  const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [trackedLength, setTrackedLength] = useState(members.length);
 
-  useEffect(() => {
+  if (trackedLength !== members.length) {
+    setTrackedLength(members.length);
     setCurrentPage(1);
-  }, [members.length]);
+  }
 
   const totalPages = Math.max(1, Math.ceil(members.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -61,106 +55,6 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
   const endIndex = Math.min(startIndex + PAGE_SIZE, members.length);
   const visibleMembers = members.slice(startIndex, endIndex);
   const showPagination = members.length > PAGE_SIZE;
-
-  const handleMigrate = async (member: MemberWithStatus) => {
-    const memberId = member.circleMember.id;
-
-    setLoadingIds((prev) => new Set([...prev, memberId]));
-
-    try {
-      const response = await fetch("/api/provision/migrate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: member.circleMember.email,
-          name: member.circleMember.name,
-          circleMemberId: String(member.circleMember.id),
-        }),
-      });
-
-      const result: ProvisionResult = await response.json();
-
-      if (!response.ok || !result.success) {
-        toast.error(result.error ?? "Migration failed");
-        return;
-      }
-
-      if (result.emailSent) {
-        toast.success(`${member.circleMember.name} migrated successfully`);
-      } else {
-        toast.warning(
-          `${member.circleMember.name} created in Auth0 but email failed. Use Retry Email.`
-        );
-      }
-
-      onMemberUpdated();
-    } catch {
-      toast.error(`Failed to migrate ${member.circleMember.name}`);
-    } finally {
-      setLoadingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(memberId);
-        return next;
-      });
-    }
-  };
-
-  const renderAction = (member: MemberWithStatus, isLoading: boolean) => {
-    switch (member.auth0Status) {
-      case "not_provisioned":
-        return (
-          <Button
-            size="sm"
-            disabled={isLoading}
-            onClick={() => handleMigrate(member)}
-            className="cursor-pointer"
-          >
-            {isLoading ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <ArrowRight className="mr-1 h-3 w-3" />
-            )}
-            Migrate
-          </Button>
-        );
-      case "auth0_created":
-        return member.auth0UserId ? (
-          <RetryEmailButton
-            email={member.circleMember.email}
-            name={member.circleMember.name}
-            auth0UserId={member.auth0UserId}
-            onRetried={onMemberUpdated}
-          />
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        );
-      case "email_sent":
-      case "password_changed":
-        return member.auth0UserId ? (
-          <RetryEmailButton
-            email={member.circleMember.email}
-            name={member.circleMember.name}
-            auth0UserId={member.auth0UserId}
-            onRetried={onMemberUpdated}
-          />
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        );
-      case "failed":
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onMemberUpdated}
-            className="cursor-pointer"
-            title={member.errorMessage ?? "Auth0 check failed — click to retry"}
-          >
-            <RefreshCw className="mr-1 h-3 w-3" />
-            Retry Check
-          </Button>
-        );
-    }
-  };
 
   if (members.length === 0) {
     return (
@@ -173,20 +67,17 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
   return (
     <div>
       <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Last Login</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {visibleMembers.map((member) => {
-          const isLoading = loadingIds.has(member.circleMember.id);
-
-          return (
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Last Login</TableHead>
+            <TableHead className="text-right">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {visibleMembers.map((member) => (
             <TableRow key={member.circleMember.id}>
               <TableCell className="font-medium">
                 {member.circleMember.name}
@@ -201,13 +92,17 @@ export function MemberTable({ members, onMemberUpdated }: MemberTableProps) {
                 {formatLastLogin(member.lastLogin)}
               </TableCell>
               <TableCell className="text-right">
-                {renderAction(member, isLoading)}
+                <div className="flex justify-end">
+                  <MemberActionsMenu
+                    member={member}
+                    onMemberUpdated={onMemberUpdated}
+                  />
+                </div>
               </TableCell>
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          ))}
+        </TableBody>
+      </Table>
       {showPagination && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">

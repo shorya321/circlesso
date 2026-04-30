@@ -58,11 +58,13 @@ function buildStatus(
   }
 
   const status: ProvisioningStatus =
-    auth0User.app_metadata?.email_sent === true && auth0User.email_verified === true
-      ? "password_changed"
-      : auth0User.app_metadata?.email_sent === true
-        ? "email_sent"
-        : "auth0_created";
+    auth0User.blocked === true
+      ? "blocked"
+      : auth0User.app_metadata?.email_sent === true && auth0User.email_verified === true
+        ? "password_changed"
+        : auth0User.app_metadata?.email_sent === true
+          ? "email_sent"
+          : "auth0_created";
 
   return {
     circleMember: member,

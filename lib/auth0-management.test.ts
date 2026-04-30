@@ -5,6 +5,8 @@ import {
   createPasswordTicket,
   updateUserMetadata,
   getUserRoles,
+  blockUser,
+  unblockUser,
   _resetTokenCache,
   Auth0RateLimitError,
 } from "./auth0-management";
@@ -437,6 +439,136 @@ describe("updateUserMetadata", () => {
     await expect(
       updateUserMetadata("auth0|invalid", { email_sent: true })
     ).rejects.toThrow();
+  });
+});
+
+describe("blockUser", () => {
+  beforeEach(() => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "mgmt-token", expires_in: 86400 }),
+    });
+  });
+
+  it("PATCHes user with blocked: true", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await blockUser("auth0|123");
+
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "https://test.us.auth0.com/api/v2/users/auth0%7C123",
+      expect.objectContaining({
+        method: "PATCH",
+        headers: expect.objectContaining({
+          Authorization: "Bearer mgmt-token",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ blocked: true }),
+      })
+    );
+  });
+
+  it("URL-encodes the user id", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await blockUser("auth0|complex+id@test");
+
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "https://test.us.auth0.com/api/v2/users/auth0%7Ccomplex%2Bid%40test",
+      expect.any(Object)
+    );
+  });
+
+  it("throws Auth0RateLimitError on 429 with parsed Retry-After", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "retry-after" ? "5" : null,
+      },
+      json: async () => ({ message: "Rate limit" }),
+    });
+
+    let thrown: unknown;
+    try {
+      await blockUser("auth0|123");
+    } catch (err) {
+      thrown = err;
+    }
+
+    expect(thrown).toBeInstanceOf(Auth0RateLimitError);
+    expect((thrown as Auth0RateLimitError).retryAfterMs).toBe(5000);
+  });
+
+  it("throws on non-2xx API error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: "User not found" }),
+    });
+
+    await expect(blockUser("auth0|missing")).rejects.toThrow(
+      /blockUser failed/
+    );
+  });
+});
+
+describe("unblockUser", () => {
+  beforeEach(() => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "mgmt-token", expires_in: 86400 }),
+    });
+  });
+
+  it("PATCHes user with blocked: false", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await unblockUser("auth0|123");
+
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "https://test.us.auth0.com/api/v2/users/auth0%7C123",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ blocked: false }),
+      })
+    );
+  });
+
+  it("throws Auth0RateLimitError on 429", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+      json: async () => ({ message: "Rate limit" }),
+    });
+
+    await expect(unblockUser("auth0|123")).rejects.toMatchObject({
+      name: "Auth0RateLimitError",
+      retryAfterMs: 2000,
+    });
+  });
+
+  it("throws on non-2xx API error", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: "Internal error" }),
+    });
+
+    await expect(unblockUser("auth0|123")).rejects.toThrow(
+      /unblockUser failed/
+    );
   });
 });
 
