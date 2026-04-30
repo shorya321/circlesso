@@ -13,28 +13,54 @@ const SPECIALS = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
 const ALL_CHARS = UPPERCASE + LOWERCASE + DIGITS + SPECIALS;
 
 /**
+ * Pick one character from `charset` using rejection sampling so the
+ * distribution is exactly uniform — no modulo bias.
+ *
+ * For a charset of length N, valid bytes are 0..floor(256/N)*N - 1.
+ * Bytes >= that ceiling are rejected and resampled. For all charsets used
+ * here (26, 10, 29, 91), the rejection rate is well under 30%, so the
+ * loop terminates in 1-2 iterations on average.
+ */
+function pickFromCharset(charset: string): string {
+  const max = Math.floor(256 / charset.length) * charset.length;
+  while (true) {
+    const byte = randomBytes(1)[0];
+    if (byte < max) {
+      return charset[byte % charset.length];
+    }
+  }
+}
+
+/**
  * Generates a cryptographically random password that meets Auth0's default
  * password policy: uppercase, lowercase, digit, and special character.
+ *
+ * Uses rejection sampling for unbiased character selection (CSPRNG quality).
  */
 export function generateRandomPassword(length: number = 32): string {
   // Guarantee at least one of each required character class
   const required = [
-    UPPERCASE[randomBytes(1)[0] % UPPERCASE.length],
-    LOWERCASE[randomBytes(1)[0] % LOWERCASE.length],
-    DIGITS[randomBytes(1)[0] % DIGITS.length],
-    SPECIALS[randomBytes(1)[0] % SPECIALS.length],
+    pickFromCharset(UPPERCASE),
+    pickFromCharset(LOWERCASE),
+    pickFromCharset(DIGITS),
+    pickFromCharset(SPECIALS),
   ];
 
   // Fill remaining positions from the full character set
-  const remaining = Array.from(randomBytes(length - required.length), (byte) =>
-    ALL_CHARS[byte % ALL_CHARS.length]
+  const remaining = Array.from({ length: length - required.length }, () =>
+    pickFromCharset(ALL_CHARS)
   );
 
-  // Combine and shuffle using Fisher-Yates with random bytes
+  // Combine and shuffle using Fisher-Yates with rejection-sampled indices
   const chars = [...required, ...remaining];
-  const shuffleBytes = randomBytes(chars.length);
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = shuffleBytes[i] % (i + 1);
+    const bound = i + 1;
+    const max = Math.floor(256 / bound) * bound;
+    let byte: number;
+    do {
+      byte = randomBytes(1)[0];
+    } while (byte >= max);
+    const j = byte % bound;
     [chars[i], chars[j]] = [chars[j], chars[i]];
   }
 
