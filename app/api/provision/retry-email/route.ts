@@ -10,10 +10,17 @@ import {
 import { sendWelcomeEmail } from "@/lib/resend-email";
 import type { ProvisionResult } from "@/types";
 
+// Auth0 user IDs follow `<connection>|<id>` and only contain alphanumerics,
+// `|`, `-`, `_`, `@`, and `.`. Regex provides defense-in-depth on top of
+// encodeURIComponent in lib/auth0-management.
 const retryEmailSchema = z.object({
   email: z.string().email(),
-  name: z.string().min(1),
-  auth0UserId: z.string().min(1),
+  name: z.string().min(1).max(200),
+  auth0UserId: z
+    .string()
+    .min(5)
+    .max(128)
+    .regex(/^[a-zA-Z0-9|_\-@.]+$/, "Invalid auth0UserId format"),
 });
 
 // POST /api/provision/retry-email — resend welcome email for an existing Auth0 user.
