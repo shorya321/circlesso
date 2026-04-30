@@ -10,7 +10,7 @@ import {
   updateUserMetadata,
 } from "@/lib/auth0-management";
 import { sendWelcomeEmail } from "@/lib/resend-email";
-import type { ProvisionResult } from "@/types";
+import type { ProvisionResult, ProvisioningStatus } from "@/types";
 
 const migrateSchema = z.object({
   email: z.string().email(),
@@ -47,9 +47,20 @@ export async function POST(request: NextRequest) {
     // Step 1: Check if user already exists in Auth0
     const existingUser = await getUserByEmail(body.email);
     if (existingUser) {
+      // Mirror buildStatus in app/api/circle/members/route.ts so the row
+      // refresh and this response agree on what state the user is in.
+      const status: ProvisioningStatus =
+        existingUser.blocked === true
+          ? "blocked"
+          : existingUser.app_metadata?.email_sent === true &&
+              existingUser.email_verified === true
+            ? "password_changed"
+            : existingUser.app_metadata?.email_sent === true
+              ? "email_sent"
+              : "auth0_created";
       return NextResponse.json<ProvisionResult>({
         success: true,
-        status: "email_sent",
+        status,
         auth0UserId: existingUser.user_id,
         emailSent: existingUser.app_metadata?.email_sent === true,
       });
