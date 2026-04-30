@@ -5,8 +5,15 @@ import { checkAdminAccess } from "@/lib/admin-check";
 import { blockUser } from "@/lib/auth0-management";
 import type { ProvisionResult } from "@/types";
 
+// Auth0 user IDs follow `<connection>|<id>` format and only contain
+// alphanumerics, `|`, `-`, `_`, `@`, and `.`. The regex provides
+// defense-in-depth on top of encodeURIComponent in lib/auth0-management.
 const blockSchema = z.object({
-  auth0UserId: z.string().min(1),
+  auth0UserId: z
+    .string()
+    .min(5)
+    .max(128)
+    .regex(/^[a-zA-Z0-9|_\-@.]+$/, "Invalid auth0UserId format"),
 });
 
 // POST /api/provision/block — block an Auth0 user (sets blocked: true).
@@ -42,13 +49,12 @@ export async function POST(request: NextRequest) {
       auth0UserId: body.auth0UserId,
     });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Block user failed";
+    console.error("provision/block failed", error);
     return NextResponse.json<ProvisionResult>(
       {
         success: false,
         status: "failed",
-        error: message,
+        error: "Failed to block user",
       },
       { status: 500 }
     );

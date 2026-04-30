@@ -103,6 +103,6 @@ describe("POST /api/provision/block", () => {
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toContain("blockUser");
+    expect(data.error).toContain("Failed to block user");
   });
 });

@@ -98,6 +98,6 @@ describe("POST /api/provision/unblock", () => {
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toContain("unblockUser");
+    expect(data.error).toContain("Failed to unblock user");
   });
 });

@@ -20,6 +20,9 @@ interface BlockInput {
   auth0UserId: string;
 }
 
+// 15s cap on stalled requests (typical Auth0 PATCH is sub-second).
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function postJson(
   url: string,
   body: unknown
@@ -28,6 +31,7 @@ async function postJson(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   const data = (await response.json()) as ProvisionResult;

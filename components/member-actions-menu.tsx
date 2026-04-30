@@ -93,31 +93,46 @@ export function MemberActionsMenu({
       `${memberName} migrated successfully`
     );
 
-  const handleRetryEmail = (): Promise<void> =>
-    runAction(
+  const handleRetryEmail = (): Promise<void> => {
+    if (!auth0UserId) {
+      toast.error("Missing user ID");
+      return Promise.resolve();
+    }
+    return runAction(
       "Password reset",
       () =>
         provisionRetryEmail({
           email: member.circleMember.email,
           name: memberName,
-          auth0UserId: auth0UserId ?? "",
+          auth0UserId,
         }),
       `Password reset email sent to ${memberName}`
     );
+  };
 
-  const handleBlock = (): Promise<void> =>
-    runAction(
+  const handleBlock = (): Promise<void> => {
+    if (!auth0UserId) {
+      toast.error("Missing user ID");
+      return Promise.resolve();
+    }
+    return runAction(
       "Block",
-      () => provisionBlock({ auth0UserId: auth0UserId ?? "" }),
+      () => provisionBlock({ auth0UserId }),
       `${memberName} blocked`
     );
+  };
 
-  const handleUnblock = (): Promise<void> =>
-    runAction(
+  const handleUnblock = (): Promise<void> => {
+    if (!auth0UserId) {
+      toast.error("Missing user ID");
+      return Promise.resolve();
+    }
+    return runAction(
       "Unblock",
-      () => provisionUnblock({ auth0UserId: auth0UserId ?? "" }),
+      () => provisionUnblock({ auth0UserId }),
       `${memberName} unblocked`
     );
+  };
 
   const confirmCopy =
     confirm === "block"
