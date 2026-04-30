@@ -72,9 +72,16 @@ export async function POST(request: NextRequest) {
       }
     }
     const accessGroupAssigned = failedGroupIds.length === 0;
+    if (!accessGroupAssigned) {
+      // IDs are internal — log server-side only, keep user message generic.
+      console.error("addMemberToGroup partial failure", {
+        email: redactEmail(body.email),
+        failedGroupIds,
+      });
+    }
     const accessGroupWarning = accessGroupAssigned
       ? undefined
-      : `Member created but NOT added to ${failedGroupIds.length} access group(s) (IDs: ${failedGroupIds.join(", ")}). Assign manually in Circle dashboard.`;
+      : `Member created but NOT added to ${failedGroupIds.length} access group(s). Assign manually in Circle dashboard.`;
 
     // Step 3: Create Auth0 user — or reuse existing one on 409.
     // Scenario: Auth0 account existed before this admin-driven Circle.so
@@ -190,7 +197,7 @@ export async function POST(request: NextRequest) {
       const emailErrorMessage =
         error instanceof Error ? error.message : "Unknown error";
       console.error("sendWelcomeEmail failed", {
-        email: body.email,
+        email: redactEmail(body.email),
         auth0UserId: auth0User.user_id,
         from: config.EMAIL_FROM,
         error: emailErrorMessage,

@@ -324,7 +324,8 @@ describe("F018: End-to-end add one new member", () => {
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.accessGroupAssigned).toBe(false);
-    expect(data.warning).toContain("20");
+    expect(data.warning).toContain("1 access group(s)");
+    expect(data.warning).toContain("Assign manually");
     expect(mockAddMemberToGroup).toHaveBeenCalledTimes(3);
     expect(mockAddMemberToGroup).toHaveBeenNthCalledWith(1, 10, "erin@newcorp.com");
     expect(mockAddMemberToGroup).toHaveBeenNthCalledWith(2, 20, "erin@newcorp.com");
