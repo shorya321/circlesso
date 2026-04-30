@@ -40,3 +40,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE / editor
+.idea/
+.vscode/
+
+# logs
+*.log
+
+# build / cache
+.turbo/
+dist/
+
+# e2e (playwright)
+playwright-report/
+test-results/
+
+# claude local settings
+.claude/settings.local.json
