@@ -67,6 +67,27 @@ describe("getManagementToken", () => {
     );
   });
 
+  it("dedupes concurrent cold-start calls into a single /oauth/token fetch", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "deduped-token",
+        expires_in: 86400,
+      }),
+    });
+
+    const [a, b, c] = await Promise.all([
+      getManagementToken(),
+      getManagementToken(),
+      getManagementToken(),
+    ]);
+
+    expect(a).toBe("deduped-token");
+    expect(b).toBe("deduped-token");
+    expect(c).toBe("deduped-token");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("returns cached token on subsequent calls within expiry", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

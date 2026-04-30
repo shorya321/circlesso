@@ -37,46 +37,65 @@ function parseRetryAfterMs(headerValue: string | null): number {
 // M2M token cache
 let cachedToken: string | null = null;
 let tokenExpiresAt: number = 0;
+// In-flight fetch promise for de-duping concurrent cold-start callers.
+// When N requests arrive simultaneously with no cached token, only one
+// /oauth/token fetch occurs; the rest await this promise.
+let tokenInFlight: Promise<string> | null = null;
 
 /** Reset token cache — exported for testing only */
 export function _resetTokenCache(): void {
   cachedToken = null;
   tokenExpiresAt = 0;
+  tokenInFlight = null;
 }
 
 /**
  * Fetch an Auth0 Management API token via client_credentials grant.
  * Caches the token based on expires_in minus a 5-minute safety margin.
+ * Concurrent callers share a single in-flight request.
  */
 export async function getManagementToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiresAt) {
     return cachedToken;
   }
-
-  const config = getConfig();
-  const response = await fetch(`https://${config.AUTH0_DOMAIN}/oauth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: config.AUTH0_M2M_CLIENT_ID,
-      client_secret: config.AUTH0_M2M_CLIENT_SECRET,
-      audience: `https://${config.AUTH0_TENANT_DOMAIN}/api/v2/`,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch Auth0 M2M token: ${response.status}`
-    );
+  if (tokenInFlight) {
+    return tokenInFlight;
   }
 
-  const data = await response.json();
-  cachedToken = data.access_token;
-  // Cache with 5-minute safety margin
-  tokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000;
+  tokenInFlight = (async () => {
+    try {
+      const config = getConfig();
+      const response = await fetch(
+        `https://${config.AUTH0_DOMAIN}/oauth/token`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "client_credentials",
+            client_id: config.AUTH0_M2M_CLIENT_ID,
+            client_secret: config.AUTH0_M2M_CLIENT_SECRET,
+            audience: `https://${config.AUTH0_TENANT_DOMAIN}/api/v2/`,
+          }),
+        }
+      );
 
-  return cachedToken!;
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch Auth0 M2M token: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      cachedToken = data.access_token;
+      // Cache with 5-minute safety margin
+      tokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000;
+      return cachedToken!;
+    } finally {
+      tokenInFlight = null;
+    }
+  })();
+
+  return tokenInFlight;
 }
 
 /**
