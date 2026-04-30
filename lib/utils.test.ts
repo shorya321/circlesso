@@ -1,4 +1,4 @@
-import { generateRandomPassword } from "./utils";
+import { generateRandomPassword, redactEmail } from "./utils";
 
 describe("generateRandomPassword", () => {
   it("generates a password of 32 characters by default", () => {
@@ -45,6 +45,15 @@ describe("generateRandomPassword", () => {
     expect(password).toMatch(validChars);
   });
 
+  it("rejects calls and produces uniform distribution sample at boundary length", () => {
+    // Sanity check that minimum length still meets policy.
+    const password = generateRandomPassword(8);
+    expect(password).toHaveLength(8);
+    expect(password).toMatch(/[A-Z]/);
+    expect(password).toMatch(/[a-z]/);
+    expect(password).toMatch(/[0-9]/);
+  });
+
   it("produces approximately uniform character distribution (no modulo bias)", () => {
     // Generate enough output to make biased selection statistically obvious.
     // 1000 passwords × 32 chars = 32_000 samples; expected per-char ≈ 351
@@ -65,5 +74,27 @@ describe("generateRandomPassword", () => {
       expect(count).toBeGreaterThan(lowerBound);
       expect(count).toBeLessThan(upperBound);
     }
+  });
+});
+
+describe("redactEmail", () => {
+  it("keeps domain, truncates local part to 2 chars", () => {
+    expect(redactEmail("alice@example.com")).toBe("al***@example.com");
+  });
+
+  it("keeps single-char local part", () => {
+    expect(redactEmail("a@example.com")).toBe("a***@example.com");
+  });
+
+  it("returns [redacted] for malformed input (no @)", () => {
+    expect(redactEmail("notanemail")).toBe("[redacted]");
+  });
+
+  it("returns [redacted] for empty local part", () => {
+    expect(redactEmail("@example.com")).toBe("[redacted]");
+  });
+
+  it("returns [redacted] for empty domain", () => {
+    expect(redactEmail("user@")).toBe("[redacted]");
   });
 });

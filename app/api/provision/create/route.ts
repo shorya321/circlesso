@@ -11,6 +11,7 @@ import {
   getUserByEmail,
 } from "@/lib/auth0-management";
 import { sendWelcomeEmail } from "@/lib/resend-email";
+import { redactEmail } from "@/lib/utils";
 import type { ProvisionResult } from "@/types";
 
 const createMemberSchema = z.object({
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       } catch (error: unknown) {
         failedGroupIds.push(groupId);
         console.error("addMemberToGroup failed", {
-          email: body.email,
+          email: redactEmail(body.email),
           accessGroupId: groupId,
           error: error instanceof Error ? error.message : error,
         });
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
             });
           } catch (metaError: unknown) {
             console.error("updateUserMetadata (link existing) failed", {
-              email: body.email,
+              email: redactEmail(body.email),
               auth0UserId: existing.user_id,
               error:
                 metaError instanceof Error

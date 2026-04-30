@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Redact an email address for safe logging — keeps domain for correlation,
+ * truncates the local-part. "alice@example.com" -> "al***@example.com".
+ */
+export function redactEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0 || at === email.length - 1) return "[redacted]";
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}***@${domain}`;
+}
+
 const UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
 const DIGITS = "0123456789";
